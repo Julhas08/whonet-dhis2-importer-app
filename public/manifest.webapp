@@ -1,0 +1,22 @@
+{
+    "name": "WHONET DATA IMPORTER",
+    "description": "To import whonet data",
+    "version": "1.0",
+    "appType": "APP",
+    "launch_path": "./index.html",
+    "default_locale": "en",
+    "activities": {
+        "dhis": {
+            "href": "*"
+        }
+    },
+    "developer": {
+        "name": "Mohammad Julhas Sujan",
+        "email": "julhaspustcse@gmail.com",
+        "url": "http://dhis2.org/",
+        "company": "UiO"
+    },
+    "icons": {
+        "48": "./whonet.jpg"
+    }
+}

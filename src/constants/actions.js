@@ -1,0 +1,1 @@
+export const UPLOAD_PRE_ALERT = 'UPLOAD_PRE_ALERT';
