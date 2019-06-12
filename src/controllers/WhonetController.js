@@ -221,7 +221,7 @@ class WHONETFileReader extends React.Component {
         * Final event json payload
         */ 
         trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadString)+'}';
-        //console.log("trackedEntityJson: ", trackedEntityJson);
+        console.log("trackedEntityJson: ", trackedEntityJson);
         eventDeJson ='{ "events":'+JSON.stringify(elementPayload)+'}';
         console.log("eventDeJson: ",eventDeJson);
 
@@ -232,7 +232,7 @@ class WHONETFileReader extends React.Component {
         * If both operation success then will show success response 
         * Close loader
         */
-        /*axios(config.baseUrl+'api/trackedEntityInstances', {
+        axios(config.baseUrl+'api/trackedEntityInstances', {
             method: 'POST',
             headers: fetchOptions.headers,
             data: trackedEntityJson,
@@ -241,7 +241,7 @@ class WHONETFileReader extends React.Component {
             console.log("TEI Response: ", response.data);
         }).catch(error => {
             throw error;
-        });*/
+        });
 
         axios(config.baseUrl+'api/events', {
             method: 'POST',
