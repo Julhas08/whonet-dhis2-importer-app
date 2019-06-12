@@ -71,14 +71,14 @@ class WHONETFileReader extends React.Component {
         // dynamic mapping code 
         let self = this;
         axios.all([
-         axios.get(config.baseUrl+'api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code]]]&paging=false',fetchOptions),
-         axios.get(config.baseUrl+'api/programs/'+config.programId+'.json?fields=id,name,displayName,programTrackedEntityAttributes[id,name,code,displayName]',fetchOptions),
+         axios.get(config.baseUrl+'api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code,attributeValues[value,attribute[id,name]]]]]&paging=false',config.fetchOptions),
+         axios.get(config.baseUrl+"api/trackedEntityAttributes.json?fields=id,name,code,attributeValues[value,attribute]",config.fetchOptions),
          axios.get(config.baseUrl+'api/optionGroups/'+config.optionGroupsId+'.json?fields=id,name,code,options[:id,name,code,attributeValues]',fetchOptions),
         ])
         .then(axios.spread(function (elements, attributes, options) {
           self.setState({
             dataElements : elements.data.programs[0].programStages[0].programStageDataElements,
-            attributes   : attributes.data.programTrackedEntityAttributes,
+            attributes   : attributes.data.trackedEntityAttributes,
             optionList   : options.data.options,        
           });      
 
@@ -124,10 +124,11 @@ class WHONETFileReader extends React.Component {
     };
 
     updateData(result) {
-        let csvData                 = result.data;    
+        let csvData              = result.data;    
         let teiPayloadString     = [];
         let eventsPayloadString  = [];
         let elementId    = "";
+        let attributeId  = "";
         let elementValue = "";
         let elementPayload = [];
         let orgUnitId = document.getElementById('selectedOrgUnitId').value;
@@ -138,46 +139,68 @@ class WHONETFileReader extends React.Component {
             let eventsPayload = [];
 
             /**
-            * Extract csv data from the selected csv file
-            * Filter the elements that mapped with CSV file   
+            * {Object.entries} iterates csv data from the selected csv file
+            * @returns {resultMappedElement} the meta attribute value that matched with csv column name and {metaAttributeValue} makes sure only the value that is not empty or true type   
             **/  
             Object.entries(csvData[i]).map(([columnName, columnValue]) => {
-            var resultMappedElement = this.state.dataElements.filter(function(element) {
-                if(typeof element.dataElement.code !== undefined){
-                    return element.dataElement.code === columnName;
-                }              
-            });  
-            if(resultMappedElement.length > 0){
-                
-                /** 
-                 * Find element id from mapping meta attribute
-                 * Mapping element value from csv file 
-                 * Find the date column and format as yyyy-mm-dd
-                 * Event json payload development
-                */
-                elementId    = resultMappedElement[0].dataElement.id;
+
+            let resultMappedElement = this.state.dataElements.filter(function(element) {
+                let metaAttributeValue = element.dataElement.attributeValues.filter(function(attribute){
+                    return attribute.value !== 'true' || attribute.value !== '';
+                });
+                if(metaAttributeValue.length > 0){                    
+                    return metaAttributeValue[0].value == columnName;
+                }
+                              
+            }); 
+            
+            
+            /** 
+             * @return {matchResult} the column value which is date or not, if date then formate it as `yyyy-mm-dd`
+             * Event json payload development
+             * @returns event json payload
+             * config.dateColumn will return the 'Date' column name from config file. Formate date column as yyyy-mm-dd for `eventDate` 
+            */
+            if(resultMappedElement.length >= 1){
                 let matchResult = columnValue.match(/\//g);
                 if(matchResult !== null && matchResult.length === 2){
-                    elementValue = formatDate(columnValue.replace(/[=><_]/gi, ''));
+                    elementValue = formatDate(columnValue);
                 } else {
                     elementValue = columnValue.replace(/[=><_]/gi, '');
-                }       
-                eventsPayload.push({"dataElement": elementId, "value": elementValue});              
-
+                } 
+                elementId    = resultMappedElement[0].dataElement.id;
+                eventsPayload.push({"dataElement": elementId, "value": elementValue});   
             }
-            /**
-            * config.dateColumn will return the 'Date' column name from config file
-            * Formate date column as yyyy-mm-dd for eventDate
-            * Tracked entity json paylod
-            * Return null in object iteration
-            */               
+
             if(columnName === config.dateColumn){
                 eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
-            }   
+            } 
+            /**
+            * {attributesFilterResult} matched columns with csv file
+            * {matchResult} finds whether the input value is date or not. If it is date then convert it as `yyyy-mm-dd`
+            * {attributeValue} returns the value with has if it is patient-id or registration number
+            * {attributeId} returns the tei atrribute id
+            * {teiPayload} contains the level-1 json payload
+            * @returns {null} end iteration
+            */   
 
-            if(columnName === "PATIENT_ID"){
-                console.log("Hash value: ", hash(columnValue));
-                patientId = {"attribute": "nFrlz82c6jS","value": columnValue};
+            let attributesFilterResult = this.state.attributes.filter(function(element) {
+                if(element.attributeValues.length >= 1){                   
+                    return element.attributeValues[0].value == columnName;
+                }                              
+            });
+            if(attributesFilterResult.length >= 1){
+                let attributeValue;
+                let matchResult = columnValue.match(/\//g);
+                if (matchResult !== null && matchResult.length === 2){
+                    attributeValue = formatDate(columnValue);
+                } else if(columnName === config.patientIdColumn){
+                    attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
+                } else {
+                    attributeValue = columnValue.replace(/[=><_]/gi, '');
+                } 
+                attributeId = attributesFilterResult[0].id;
+                teiPayload.push({"attribute": attributeId, "value": attributeValue});
             }  
 
             return null;
@@ -188,7 +211,6 @@ class WHONETFileReader extends React.Component {
             * To make event json payload
             * trackedEntityInstance, programId, programStage are initializing from Config component
             */ 
-            teiPayload.push(patientId);
             teiPayloadString.push({"trackedEntityInstance": config.trackedEntityInstance,"orgUnit": orgUnitId,"trackedEntityType": config.trackedEntityType,"attributes": teiPayload});
 
             elementPayload.push({"program": config.programId,"orgUnit": orgUnitId,"trackedEntityInstance":  config.trackedEntityInstance,"eventDate": eventDate,"programStage": config.programStage,"dataValues": eventsPayload});
@@ -219,7 +241,7 @@ class WHONETFileReader extends React.Component {
             console.log("TEI Response: ", response.data);
         }).catch(error => {
             throw error;
-        });
+        });*/
 
         axios(config.baseUrl+'api/events', {
             method: 'POST',
@@ -251,7 +273,7 @@ class WHONETFileReader extends React.Component {
                 loading: false
             });
             console.warn(error);
-        });  */ 
+        });   
         
     }
     onChangeValue = (field, value) => {
