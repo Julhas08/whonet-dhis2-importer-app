@@ -15,6 +15,7 @@ import * as config  from '../config/Config';
 import * as styleProps  from '../components/ui/Styles';
 import * as actionTypes from '../constants/actions.js';
 import { formatDate } from '../components/helpers/DateFormat';
+import { hash } from '../components/helpers/Hash';
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
   width: (styleProps.styles.card.width * 3) + (styleProps.styles.card.margin * 4),
 });
@@ -174,7 +175,8 @@ class WHONETFileReader extends React.Component {
                 eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
             }   
 
-            if(columnName === "Patient ID"){
+            if(columnName === "PATIENT_ID"){
+                console.log("Hash value: ", hash(columnValue));
                 patientId = {"attribute": "nFrlz82c6jS","value": columnValue};
             }  
 
@@ -208,7 +210,7 @@ class WHONETFileReader extends React.Component {
         * If both operation success then will show success response 
         * Close loader
         */
-        axios(config.baseUrl+'api/trackedEntityInstances', {
+        /*axios(config.baseUrl+'api/trackedEntityInstances', {
             method: 'POST',
             headers: fetchOptions.headers,
             data: trackedEntityJson,
@@ -249,7 +251,7 @@ class WHONETFileReader extends React.Component {
                 loading: false
             });
             console.warn(error);
-        });   
+        });  */ 
         
     }
     onChangeValue = (field, value) => {
