@@ -16,6 +16,7 @@ import * as styleProps  from '../components/ui/Styles';
 import * as actionTypes from '../constants/actions.js';
 import { formatDate } from '../components/helpers/DateFormat';
 import { hash } from '../components/helpers/Hash';
+import {isDuplicate } from '../components/api/API';
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
   width: (styleProps.styles.card.width * 3) + (styleProps.styles.card.margin * 4),
 });
@@ -196,6 +197,9 @@ class WHONETFileReader extends React.Component {
                     attributeValue = formatDate(columnValue);
                 } else if(columnName === config.patientIdColumn){
                     attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
+                    isDuplicate(attributeValue).then(res => {
+                        console.log("Response: ", res);
+                    });
                 } else {
                     attributeValue = columnValue.replace(/[=><_]/gi, '');
                 } 
@@ -221,9 +225,9 @@ class WHONETFileReader extends React.Component {
         * Final event json payload
         */ 
         trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadString)+'}';
-        console.log("trackedEntityJson: ", trackedEntityJson);
+        //console.log("trackedEntityJson: ", trackedEntityJson);
         eventDeJson ='{ "events":'+JSON.stringify(elementPayload)+'}';
-        console.log("eventDeJson: ",eventDeJson);
+        //console.log("eventDeJson: ",eventDeJson);
 
         /**
         * Sending tracked entity json payload
@@ -232,7 +236,7 @@ class WHONETFileReader extends React.Component {
         * If both operation success then will show success response 
         * Close loader
         */
-        axios(config.baseUrl+'api/trackedEntityInstances', {
+        /*axios(config.baseUrl+'api/trackedEntityInstances', {
             method: 'POST',
             headers: fetchOptions.headers,
             data: trackedEntityJson,
@@ -273,7 +277,7 @@ class WHONETFileReader extends React.Component {
                 loading: false
             });
             console.warn(error);
-        });   
+        }); */  
         
     }
     onChangeValue = (field, value) => {
