@@ -33,7 +33,7 @@ class AttributesTable extends React.Component {
   render(){
     const classes = this.props;
     let tabaleData;
-    console.log("this.props.attributes: ", this.props.attributes);
+    //console.log("this.props.attributes: ", this.props.attributes);
     if(typeof this.props.attributes !== 'undefined' || this.props.attributes.length !== 0){
     /*this.props.attributes.map(row => (
       

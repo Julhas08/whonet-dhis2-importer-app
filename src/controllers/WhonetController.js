@@ -17,6 +17,9 @@ import * as actionTypes from '../constants/actions.js';
 import { formatDate } from '../components/helpers/DateFormat';
 import { hash } from '../components/helpers/Hash';
 import { 
+    getPrograms,
+    getAttributes,
+    getOptions,
     isDuplicate, 
     createTrackedEntity,
     createEvents 
@@ -38,7 +41,6 @@ class WHONETFileReader extends React.Component {
             loading     : false,
             error       : false,
             userOrgUnitName: props.orgUnit,
-            eventsResponse : '',
             fileFormatValue: '',
             isModalOpen: false,
             userRoles  : "",
@@ -47,6 +49,7 @@ class WHONETFileReader extends React.Component {
             attributes: [],
             optionList: [],
             counter: 0,
+            emptyTrackedEntityPayload: false,
         };
         this.updateData = this.updateData.bind(this);
         
@@ -76,7 +79,7 @@ class WHONETFileReader extends React.Component {
 
         // dynamic mapping code 
         let self = this;
-        axios.all([
+        /*axios.all([
          axios.get(config.baseUrl+'api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code,attributeValues[value,attribute[id,name]]]]]&paging=false',config.fetchOptions),
          axios.get(config.baseUrl+"api/trackedEntityAttributes.json?fields=id,name,code,attributeValues[value,attribute]",config.fetchOptions),
          axios.get(config.baseUrl+'api/optionGroups/'+config.optionGroupsId+'.json?fields=id,name,code,options[:id,name,code,attributeValues]',fetchOptions),
@@ -89,7 +92,25 @@ class WHONETFileReader extends React.Component {
           });      
 
         }))
-        .catch(error => this.setState({error: true}));         
+        .catch(error => this.setState({error: true}));*/
+        getPrograms().then((response) => {
+          self.setState({
+            dataElements : response.data.programs[0].programStages[0].programStageDataElements       
+          }); 
+        });
+
+        getAttributes().then((response) => {
+          self.setState({
+            attributes   : response.data.trackedEntityAttributes
+          });
+        });
+
+        getOptions().then((response) => {
+          self.setState({
+            optionList   : response.data.options        
+          }); 
+        });
+         
     }
     handleChangeFileUpload = event => {
 
@@ -138,7 +159,7 @@ class WHONETFileReader extends React.Component {
         let elementValue = "";
         let elementPayload = [];
         let orgUnitId = document.getElementById('selectedOrgUnitId').value;
-        let trackedEntityJson, eventDeJson, patientId, eventDate;
+        let trackedEntityJson, eventDate;
 
         for (var i = 0; i < csvData.length-1; i++) {
             let teiPayload    = [];    
@@ -163,8 +184,6 @@ class WHONETFileReader extends React.Component {
             
             /** 
              * @return {matchResult} the column value which is date or not, if date then formate it as `yyyy-mm-dd`
-             * Event json payload development
-             * @returns event json payload
              * config.dateColumn will return the 'Date' column name from config file. Formate date column as yyyy-mm-dd for `eventDate` 
             */
             if(resultMappedElement.length >= 1){
@@ -187,9 +206,10 @@ class WHONETFileReader extends React.Component {
             * {attributeValue} returns the value with has if it is patient-id or registration number
             * {attributeId} returns the tei atrribute id
             * {teiPayload} contains the level-1 json payload
+            * {isDuplicate} check the existing record
             * @returns {null} end iteration
             */   
-
+            //console.log("this.state.attributes: ", this.state.attributes);
             let attributesFilterResult = this.state.attributes.filter(function(element) {
                 if(element.attributeValues.length >= 1){                   
                     return element.attributeValues[0].value == columnName;
@@ -209,9 +229,6 @@ class WHONETFileReader extends React.Component {
                           if(attributes.length > 0){
                             duplicateData = "Duplicate Attribute ID: "+attributes[0].attribute + " & value: " + attributes[0].value;
                             console.warn("Found duplicate! See results: "+ duplicateData)
-                            /*swal("Found duplicate! Attribute ID: "+attributes[0].attribute + " Duplicate value: " + attributes[0].value, {
-                                icon: "warning",
-                            });*/
                           }  
                         } else {
                             attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
@@ -231,130 +248,66 @@ class WHONETFileReader extends React.Component {
           
             /**
             * To make tracked entity JSON payload
-            * To make event json payload
             * trackedEntityInstance, programId, programStage are initializing from Config component
+            * @returns {String} teiPayloadString-json payload
             */ 
-            // teiPayloadString.push({"trackedEntityInstance": config.trackedEntityInstance,"orgUnit": orgUnitId,"trackedEntityType": config.trackedEntityType,"attributes": teiPayload});
-            teiPayloadString.push({"trackedEntityType": config.trackedEntityType,"orgUnit": orgUnitId,"attributes": teiPayload,"enrollments":[{"orgUnit":orgUnitId,"program":config.programId,"enrollmentDate":"2019-06-13","incidentDate":"2019-06-13","events":[{"program":config.programId,"orgUnit":orgUnitId,"eventDate":"2019-06-13","status":"COMPLETED","storedBy":"julhas","programStage":config.programStage,"dataValues":eventsPayload}]}]});
-
-
-            // elementPayload.push({"program": config.programId,"orgUnit": orgUnitId,"trackedEntityInstance":  config.trackedEntityInstance,"eventDate": eventDate,"programStage": config.programStage,"dataValues": eventsPayload});
+            if( teiPayload.length !== 0 || eventsPayload.length !==0 ){
+                teiPayloadString.push({"trackedEntityType": config.trackedEntityType,"orgUnit": orgUnitId,"attributes": teiPayload,"enrollments":[{"orgUnit":orgUnitId,"program":config.programId,"enrollmentDate": eventDate,"incidentDate": eventDate,"events":[{"program":config.programId,"orgUnit":orgUnitId,"eventDate": eventDate,"status":"ACTIVE","programStage":config.programStage,"dataValues":eventsPayload}]}]});
+            } else {
+                swal("Sorry! The prepared JSON payload is empty. Please check your CSV file data. TeiPayload: "+ teiPayload, {
+                    icon: "warning",
+                });
+            }
+            
             
         }
-        /**
-        * Final tei json payload
-        * Final event json payload
-        */ 
-        trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadString)+'}';
-        console.log("trackedEntityJson: ", trackedEntityJson);
-        //eventDeJson ='{ "events":'+JSON.stringify(elementPayload)+'}';
-        //console.log("eventDeJson: ",eventDeJson);
 
         /**
+        * {trackedEntityJson} returns final json payload
+        * Check whether the trackedEntityInstances is not undefined or empty json
+        * {trackedEntityJson} sends to `API` component 
         * Sending tracked entity json payload
-        * Sending event json payload
-        * Check response type for tei and events are ok are not
-        * If both operation success then will show success response 
-        * Close loader
+        * Check response status for tei is `OK`      
         */
 
-        createTrackedEntity(trackedEntityJson).then(response => {
+        trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadString)+'}';
+        console.log("Final trackedEntityJson payload: ", trackedEntityJson);
+        if (teiPayloadString.length > 0) {
 
-            if(response.data.httpStatus === "OK" ){
-                swal("Successfully uploaded WHONET data!", {
-                    icon: "success",
-                });
-                this.setState({
-                    loading: false
-                });
-            } else {
-                swal("Sorry! Unable to import WHONET file!", {
+            createTrackedEntity(trackedEntityJson).then(response => {
+                if(response.data.httpStatus === "OK" ){
+                    swal("Successfully uploaded WHONET data!", {
+                        icon: "success",
+                    });
+                    this.setState({
+                        loading: false
+                    });
+                } else {
+                    swal("Sorry! Unable to import WHONET file!", {
+                        icon: "warning",
+                    });
+                    this.setState({
+                        loading: false
+                    });
+                } 
+            }).catch(error => {
+                swal("Something went wrong! "+ error, {
                     icon: "warning",
                 });
                 this.setState({
                     loading: false
                 });
-            } 
-        }).catch(error => {
-            swal("Something went wrong! "+ error, {
+                console.warn(error);
+            });
+        } else {
+            swal("Sorry! The prepared JSON payload is empty. Please check your CSV file data.", {
                 icon: "warning",
             });
             this.setState({
                 loading: false
             });
-            console.warn(error);
-        });
-        /*
-        createEvents(eventDeJson).then(response => {
-            this.setState({eventsResponse : response.data.httpStatus})
-            console.log("Event Response: ", response.data);
-            if(this.state.teiResponse === "OK" && this.state.eventsResponse === "OK"){
-                swal("Successfully uploaded WHONET data!", {
-                    icon: "success",
-                });
-                this.setState({
-                    loading: false
-                });
-            } else {
-                swal("Sorry! Unable to import WHONET file!", {
-                    icon: "warning",
-                });
-                this.setState({
-                    loading: false
-                });
-            } 
-        }).catch(error => {
-            swal("Something went wrong! Error: "+error, {
-                icon: "warning",
-            });
-            this.setState({
-                loading: false
-            });
-            console.warn(error);
-        }); */  
-
-        /*axios(config.baseUrl+'api/trackedEntityInstances', {
-            method: 'POST',
-            headers: fetchOptions.headers,
-            data: trackedEntityJson,
-        }).then(response => {
-            this.setState({ teiResponse : response.data.httpStatus})
-            console.log("TEI Response: ", response.data);
-        }).catch(error => {
-            //throw error;
-            console.warn(error);
-        });
-        axios(config.baseUrl+'api/events', {
-            method: 'POST',
-            headers: fetchOptions.headers,
-            data: eventDeJson,
-        }).then(response => {
-            this.setState({eventsResponse : response.data.httpStatus})
-            console.log("Event Response: ", response.data);
-            if(this.state.teiResponse === "OK" && this.state.eventsResponse === "OK"){
-                swal("Successfully uploaded WHONET data!", {
-                    icon: "success",
-                });
-                this.setState({
-                    loading: false
-                });
-            } else {
-                swal("Sorry! Unable to import WHONET file!", {
-                    icon: "warning",
-                });
-                this.setState({
-                    loading: false
-                });
-            } 
-        }).catch(error => {
-            swal("Sorry! Unable to import WHONET file!", {
-                icon: "warning",
-            });
-            this.setState({
-                loading: false
-            });
-            console.warn(error);
-        });*/
+        }       
+        
         
     }
     onChangeValue = (field, value) => {

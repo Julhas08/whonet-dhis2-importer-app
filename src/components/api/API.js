@@ -42,21 +42,41 @@ export const createTrackedEntity = async (trackedEntityJson) => {
    
 };
 
-export const createEvents = async (eventDeJson) => {
-    return await axios(config.baseUrl+'api/events', {
-            method: 'POST',
-            headers: config.fetchOptions.headers,
-            data: eventDeJson,
-        })
-
-        /*post('api/events', eventDeJson)
-    	.then(function (response) {
+export const getPrograms = async () => {
+    let response = await get('api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code,attributeValues[value,attribute[id,name]]]]]&paging=false')
+    	.then(function (response) {    		
 			return response;
 		})
 		.catch(function (error) {
 			// handle error
 			console.log(error);
-		});*/
+		});
 
-   
+	return response;
+};
+
+export const getAttributes = async () => {
+    let response = await get('api/trackedEntityAttributes.json?fields=id,name,code,attributeValues[value,attribute]')
+    	.then(function (response) {    		
+			return response;
+		})
+		.catch(function (error) {
+			// handle error
+			console.log(error);
+		});
+
+	return response;
+};
+
+export const getOptions = async () => {
+    let response = await get('api/optionGroups/'+config.optionGroupsId+'.json?fields=id,name,code,options[:id,name,code,attributeValues]')
+    	.then(function (response) {    		
+			return response;
+		})
+		.catch(function (error) {
+			// handle error
+			console.log(error);
+		});
+
+	return response;
 };
