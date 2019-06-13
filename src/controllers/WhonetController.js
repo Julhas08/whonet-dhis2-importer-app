@@ -16,7 +16,12 @@ import * as styleProps  from '../components/ui/Styles';
 import * as actionTypes from '../constants/actions.js';
 import { formatDate } from '../components/helpers/DateFormat';
 import { hash } from '../components/helpers/Hash';
-import {isDuplicate } from '../components/api/API';
+import { 
+    isDuplicate, 
+    createTrackedEntity,
+    createEvents 
+} from '../components/api/API';
+
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
   width: (styleProps.styles.card.width * 3) + (styleProps.styles.card.margin * 4),
 });
@@ -190,16 +195,30 @@ class WHONETFileReader extends React.Component {
                     return element.attributeValues[0].value == columnName;
                 }                              
             });
+
             if(attributesFilterResult.length >= 1){
                 let attributeValue;
+                let duplicateData = "";
                 let matchResult = columnValue.match(/\//g);
                 if (matchResult !== null && matchResult.length === 2){
                     attributeValue = formatDate(columnValue);
                 } else if(columnName === config.patientIdColumn){
-                    attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
-                    isDuplicate(attributeValue).then(res => {
-                        console.log("Response: ", res);
+                    
+                    isDuplicate(attributeValue, orgUnitId).then(attributes => {
+                        if(typeof attributes !== 'undefined'){
+                          if(attributes.length > 0){
+                            duplicateData = "Duplicate Attribute ID: "+attributes[0].attribute + " & value: " + attributes[0].value;
+                            console.warn("Found duplicate! See results: "+ duplicateData)
+                            /*swal("Found duplicate! Attribute ID: "+attributes[0].attribute + " Duplicate value: " + attributes[0].value, {
+                                icon: "warning",
+                            });*/
+                          }  
+                        } else {
+                            attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
+                        }
+                        
                     });
+                    attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
                 } else {
                     attributeValue = columnValue.replace(/[=><_]/gi, '');
                 } 
@@ -215,9 +234,11 @@ class WHONETFileReader extends React.Component {
             * To make event json payload
             * trackedEntityInstance, programId, programStage are initializing from Config component
             */ 
-            teiPayloadString.push({"trackedEntityInstance": config.trackedEntityInstance,"orgUnit": orgUnitId,"trackedEntityType": config.trackedEntityType,"attributes": teiPayload});
+            // teiPayloadString.push({"trackedEntityInstance": config.trackedEntityInstance,"orgUnit": orgUnitId,"trackedEntityType": config.trackedEntityType,"attributes": teiPayload});
+            teiPayloadString.push({"trackedEntityType": config.trackedEntityType,"orgUnit": orgUnitId,"attributes": teiPayload,"enrollments":[{"orgUnit":orgUnitId,"program":config.programId,"enrollmentDate":"2019-06-13","incidentDate":"2019-06-13","events":[{"program":config.programId,"orgUnit":orgUnitId,"eventDate":"2019-06-13","status":"COMPLETED","storedBy":"julhas","programStage":config.programStage,"dataValues":eventsPayload}]}]});
 
-            elementPayload.push({"program": config.programId,"orgUnit": orgUnitId,"trackedEntityInstance":  config.trackedEntityInstance,"eventDate": eventDate,"programStage": config.programStage,"dataValues": eventsPayload});
+
+            // elementPayload.push({"program": config.programId,"orgUnit": orgUnitId,"trackedEntityInstance":  config.trackedEntityInstance,"eventDate": eventDate,"programStage": config.programStage,"dataValues": eventsPayload});
             
         }
         /**
@@ -225,8 +246,8 @@ class WHONETFileReader extends React.Component {
         * Final event json payload
         */ 
         trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadString)+'}';
-        //console.log("trackedEntityJson: ", trackedEntityJson);
-        eventDeJson ='{ "events":'+JSON.stringify(elementPayload)+'}';
+        console.log("trackedEntityJson: ", trackedEntityJson);
+        //eventDeJson ='{ "events":'+JSON.stringify(elementPayload)+'}';
         //console.log("eventDeJson: ",eventDeJson);
 
         /**
@@ -236,6 +257,62 @@ class WHONETFileReader extends React.Component {
         * If both operation success then will show success response 
         * Close loader
         */
+
+        createTrackedEntity(trackedEntityJson).then(response => {
+
+            if(response.data.httpStatus === "OK" ){
+                swal("Successfully uploaded WHONET data!", {
+                    icon: "success",
+                });
+                this.setState({
+                    loading: false
+                });
+            } else {
+                swal("Sorry! Unable to import WHONET file!", {
+                    icon: "warning",
+                });
+                this.setState({
+                    loading: false
+                });
+            } 
+        }).catch(error => {
+            swal("Something went wrong! "+ error, {
+                icon: "warning",
+            });
+            this.setState({
+                loading: false
+            });
+            console.warn(error);
+        });
+        /*
+        createEvents(eventDeJson).then(response => {
+            this.setState({eventsResponse : response.data.httpStatus})
+            console.log("Event Response: ", response.data);
+            if(this.state.teiResponse === "OK" && this.state.eventsResponse === "OK"){
+                swal("Successfully uploaded WHONET data!", {
+                    icon: "success",
+                });
+                this.setState({
+                    loading: false
+                });
+            } else {
+                swal("Sorry! Unable to import WHONET file!", {
+                    icon: "warning",
+                });
+                this.setState({
+                    loading: false
+                });
+            } 
+        }).catch(error => {
+            swal("Something went wrong! Error: "+error, {
+                icon: "warning",
+            });
+            this.setState({
+                loading: false
+            });
+            console.warn(error);
+        }); */  
+
         /*axios(config.baseUrl+'api/trackedEntityInstances', {
             method: 'POST',
             headers: fetchOptions.headers,
@@ -244,9 +321,9 @@ class WHONETFileReader extends React.Component {
             this.setState({ teiResponse : response.data.httpStatus})
             console.log("TEI Response: ", response.data);
         }).catch(error => {
-            throw error;
+            //throw error;
+            console.warn(error);
         });
-
         axios(config.baseUrl+'api/events', {
             method: 'POST',
             headers: fetchOptions.headers,
@@ -277,7 +354,7 @@ class WHONETFileReader extends React.Component {
                 loading: false
             });
             console.warn(error);
-        }); */  
+        });*/
         
     }
     onChangeValue = (field, value) => {
