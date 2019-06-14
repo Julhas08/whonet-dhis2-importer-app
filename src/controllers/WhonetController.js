@@ -9,7 +9,6 @@ import axios from 'axios';
 import swal from 'sweetalert';
 import LinearProgress from '../components/ui/LinearProgress';
 import MappingModal from '../components/settings/MappingModal';
-//import Aux from '../hoc/Auxi';
 import SettingsIcon from '@material-ui/icons/Settings';
 import * as config  from '../config/Config';
 import * as styleProps  from '../components/ui/Styles';

@@ -28,17 +28,16 @@ export const isDuplicate = async (input, orgUnitId) => {
 			console.log(error);
 		});
 
-	 return res;
+	return res;
    
 };
 
 export const createTrackedEntity = async (trackedEntityJson) => {
-        return await axios(config.baseUrl+'api/trackedEntityInstances', {
-            method: 'POST',
-            headers: config.fetchOptions.headers,
-            data: trackedEntityJson,
-        })
-
+    return await axios(config.baseUrl+'api/trackedEntityInstances', {
+        method: 'POST',
+        headers: config.fetchOptions.headers,
+        data: trackedEntityJson,
+    })
    
 };
 
@@ -48,7 +47,6 @@ export const getPrograms = async () => {
 			return response;
 		})
 		.catch(function (error) {
-			// handle error
 			console.log(error);
 		});
 
@@ -61,7 +59,6 @@ export const getAttributes = async () => {
 			return response;
 		})
 		.catch(function (error) {
-			// handle error
 			console.log(error);
 		});
 
@@ -74,9 +71,33 @@ export const getOptions = async () => {
 			return response;
 		})
 		.catch(function (error) {
-			// handle error
 			console.log(error);
 		});
 
 	return response;
+};
+
+/**
+* @retunrs single element detail
+*/
+export const getElementDetails = async (elementId) => {
+    return await get('api/dataElements/'+elementId)
+    	.then(function (response) {    		
+			return response;
+		})
+		.catch(function (error) {
+			console.log(error);
+		});
+};
+/**
+* Meta attribute-elements update
+* updates of attributes values
+*/
+export const metaElementUpdate = async (api, jsonPayload) => {
+    return await axios(config.baseUrl+api, {
+        method: 'PUT',
+        headers: config.fetchOptions.headers,
+        data: jsonPayload,
+    })
+   
 };

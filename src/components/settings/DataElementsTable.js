@@ -11,6 +11,10 @@ import axios from 'axios';
 import LinearProgress from '../ui/LinearProgress';
 import * as styleProps  from '../ui/Styles';
 import * as config  from '../../config/Config';
+import { 
+    metaElementUpdate,
+    getElementDetails
+} from '../api/API';
 
 class DataElementsTable extends React.Component {
    constructor(props) {
@@ -62,20 +66,22 @@ class DataElementsTable extends React.Component {
       if (willUpdate) {        
         let j=0;
         for (let i = 0; i < updateArray.length-1; i++) { //updateArray.length-1
-          axios(config.baseUrl+'api/dataElements/'+updateArray[i].id, {
-              method: 'PATCH',
-              headers: {
-              Accept: 'application/json',
-              'content-type': 'application/json',
-              Authorization: "Basic " + btoa("julhas:Amr@1234")   
-              },
-              data: JSON.stringify({"code": updateArray[i].value}),
-          }).then(response => {
-              console.log("Response: ", response.data);
-              
-          }).catch(error => {
-              throw error;
-          }); 
+
+          if(updateArray[i].value !== '' && updateArray[i].value !== 'true' ){
+            getElementDetails(updateArray[i].id).then((response) => {
+                let customElementString = response.data;
+                let attributeId =  customElementString.attributeValues.map( val => val.attribute.id);
+             
+                let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId[0] }}]});
+
+                metaElementUpdate('api/dataElements/'+updateArray[i].id, jsonPayload)
+                  .then((response) => {
+                    console.log("Response: ", response);
+                  });
+              });
+            
+            }
+
           j++;
         }
         if(j === updateArray.length-1){

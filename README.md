@@ -1,4 +1,4 @@
-## WHONET to DHIS2 Importer App
+## WHONET to DHIS2 AMR Importer App
 
 In the project directory, you can run:
 
