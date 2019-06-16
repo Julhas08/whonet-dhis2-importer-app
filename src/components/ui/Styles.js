@@ -1,11 +1,22 @@
 export const styles = {
   card: {
     margin: 16,
-    width: 550,
+    width: 350,
     minHeight: 300,
     float: 'left',
     transition: 'all 175ms ease-out',
   },
+  inputText: {
+    borderTop: 'none',
+    borderLeft: 'none',
+    borderRight: 'none',
+    borderBottom: '1px solid #03a8f45e',
+    padding: '5px 15px',
+    outline: 'none',
+  },
+  focus: {
+    borderColor: 'green'
+  }, 
   cardModal: {
     margin: '0 auto',
     marginTop: 70,

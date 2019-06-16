@@ -10,7 +10,7 @@ import { get, post } from './CRUD';
 export const isDuplicate = async (input, orgUnitId) => {
 	let duplicateValue=[];
 	let matchResult;
-    let res = await get('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId+'&fields=attributes[attribute, value]')
+    return await get('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId+'&fields=attributes[attribute, value]')
     	.then(function (response) {
     		if(response.data.trackedEntityInstances.length != 0){
 	    		if(typeof response.data.trackedEntityInstances !== 'undefined'){
@@ -27,8 +27,6 @@ export const isDuplicate = async (input, orgUnitId) => {
 			// handle error
 			console.log(error);
 		});
-
-	return res;
    
 };
 
@@ -42,39 +40,33 @@ export const createTrackedEntity = async (trackedEntityJson) => {
 };
 
 export const getPrograms = async () => {
-    let response = await get('api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code,attributeValues[value,attribute[id,name]]]]]&paging=false')
+    return await get('api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code,attributeValues[value,attribute[id,name]]]]]&paging=false')
     	.then(function (response) {    		
 			return response;
 		})
 		.catch(function (error) {
 			console.log(error);
 		});
-
-	return response;
 };
 
 export const getAttributes = async () => {
-    let response = await get('api/trackedEntityAttributes.json?fields=id,name,code,attributeValues[value,attribute]')
+    return await get('api/trackedEntityAttributes.json?fields=id,name,code,attributeValues[value,attribute]')
     	.then(function (response) {    		
 			return response;
 		})
 		.catch(function (error) {
 			console.log(error);
 		});
-
-	return response;
 };
 
 export const getOptions = async () => {
-    let response = await get('api/optionGroups/'+config.optionGroupsId+'.json?fields=id,name,code,options[:id,name,code,attributeValues]')
+    return await get('api/optionGroups/'+config.optionGroupsId+'.json?fields=id,name,code,options[:id,name,code,attributeValues]')
     	.then(function (response) {    		
 			return response;
 		})
 		.catch(function (error) {
 			console.log(error);
 		});
-
-	return response;
 };
 
 /**
@@ -90,10 +82,35 @@ export const getElementDetails = async (elementId) => {
 		});
 };
 /**
-* Meta attribute-elements update
+* @retunrs single attribute detail
+*/
+export const getAttributeDetails = async (attributeId) => {
+    return await get('api/trackedEntityAttributes/'+attributeId)
+    	.then(function (response) {    		
+			return response;
+		})
+		.catch(function (error) {
+			console.log(error);
+		});
+};
+/**
+* Category Options
+* @retunrs single option detail
+*/
+export const getOptionDetails = async (optionId) => {
+    return await get('api/categoryOptions/'+optionId)
+    	.then(function (response) {    		
+			return response;
+		})
+		.catch(function (error) {
+			console.log(error);
+		});
+};
+/**
+* Meta attribute-elements-options update
 * updates of attributes values
 */
-export const metaElementUpdate = async (api, jsonPayload) => {
+export const metaDataUpdate = async (api, jsonPayload) => {
     return await axios(config.baseUrl+api, {
         method: 'PUT',
         headers: config.fetchOptions.headers,

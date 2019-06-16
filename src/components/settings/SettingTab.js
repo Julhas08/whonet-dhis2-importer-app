@@ -8,7 +8,7 @@ import axios from 'axios';
 import { 
     getPrograms,
     getAttributes,
-    getOptions
+    getOptionsInOptionGroups
 } from '../api/API';
 class SettingTab extends React.Component {
     constructor(props) {
@@ -34,7 +34,7 @@ class SettingTab extends React.Component {
           });
         }).catch(error => this.setState({error: true}));
 
-        getOptions().then((response) => {
+        getOptionsInOptionGroups().then((response) => {
           self.setState({
             optionList   : response.data.options        
           }); 
