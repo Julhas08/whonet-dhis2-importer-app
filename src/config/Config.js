@@ -1,10 +1,8 @@
-export const baseUrl = 'https://amrtest.icmr.org.in/amrtest/';
-// export const baseUrl = '../../../';
+export const baseUrl = '../../../';
 export const fetchOptions = {
   headers: { 
     Accept: 'application/json',
     'Content-Type': 'application/json',
-    Authorization: "Basic " + btoa("julhas:Amr@1234")     
   }
 };
 export const programId   = "ywNJYaTUVRT";
