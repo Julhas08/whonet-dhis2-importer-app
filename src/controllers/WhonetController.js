@@ -18,7 +18,7 @@ import { hash } from '../components/helpers/Hash';
 import { 
     getPrograms,
     getAttributes,
-    getOptions,
+    getOptionsInOptionGroups,
     isDuplicate, 
     createTrackedEntity,
     createEvents 
@@ -104,7 +104,7 @@ class WHONETFileReader extends React.Component {
           });
         });
 
-        getOptions().then((response) => {
+        getOptionsInOptionGroups().then((response) => {
           self.setState({
             optionList   : response.data.options        
           }); 

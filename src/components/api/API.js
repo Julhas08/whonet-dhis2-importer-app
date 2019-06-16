@@ -59,7 +59,7 @@ export const getAttributes = async () => {
 		});
 };
 
-export const getOptions = async () => {
+export const getOptionsInOptionGroups = async () => {
     return await get('api/optionGroups/'+config.optionGroupsId+'.json?fields=id,name,code,options[:id,name,code,attributeValues]')
     	.then(function (response) {    		
 			return response;
@@ -68,6 +68,7 @@ export const getOptions = async () => {
 			console.log(error);
 		});
 };
+
 
 /**
 * @retunrs single element detail
