@@ -78,20 +78,7 @@ class WHONETFileReader extends React.Component {
 
         // dynamic mapping code 
         let self = this;
-        /*axios.all([
-         axios.get(config.baseUrl+'api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code,attributeValues[value,attribute[id,name]]]]]&paging=false',config.fetchOptions),
-         axios.get(config.baseUrl+"api/trackedEntityAttributes.json?fields=id,name,code,attributeValues[value,attribute]",config.fetchOptions),
-         axios.get(config.baseUrl+'api/optionGroups/'+config.optionGroupsId+'.json?fields=id,name,code,options[:id,name,code,attributeValues]',fetchOptions),
-        ])
-        .then(axios.spread(function (elements, attributes, options) {
-          self.setState({
-            dataElements : elements.data.programs[0].programStages[0].programStageDataElements,
-            attributes   : attributes.data.trackedEntityAttributes,
-            optionList   : options.data.options,        
-          });      
 
-        }))
-        .catch(error => this.setState({error: true}));*/
         getPrograms().then((response) => {
           self.setState({
             dataElements : response.data.programs[0].programStages[0].programStageDataElements       
