@@ -9,8 +9,8 @@ import WhonetController from '../../controllers/WhonetController';
 const styles = {
 	card: {
 		margin: 16,
-        width: 350,
-		minHeight: 300,
+        width: 380,
+		minHeight: 379,
 		float: 'left',
 		transition: 'all 175ms ease-out',
 	},

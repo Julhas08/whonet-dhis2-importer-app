@@ -1,8 +1,16 @@
+import { makeStyles } from '@material-ui/core/styles';
 export const styles = {
   card: {
     margin: 16,
-    width: 350,
-    minHeight: 300,
+    width: 380,
+    minHeight: 379,
+    float: 'left',
+    transition: 'all 175ms ease-out',
+  },
+  cardDryRun: {
+    margin: 16,
+    width: 1210,
+    minHeight: 150,
     float: 'left',
     transition: 'all 175ms ease-out',
   },
@@ -39,6 +47,12 @@ export const styles = {
     borderBottom: '1px solid #eeeeee',
     textAlign: 'center',
   },
+  leftSpacing: {
+    marginLeft: '10px',
+  },
+  rightSpacing: {
+    marginRight: '10px',
+  },
   textField:{
     margin: 16,
     display: 'flex',
@@ -48,7 +62,7 @@ export const styles = {
     justifyContent: 'space-between',
   },
   buttonPosition: {
-    marginTop: '37px',
+    marginTop: '60px',
   },
   settingIcon: {
     float: 'right',

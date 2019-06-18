@@ -11,14 +11,15 @@ import LinearProgress from '../components/ui/LinearProgress';
 import MappingModal from '../components/settings/MappingModal';
 import SettingsIcon from '@material-ui/icons/Settings';
 import * as config  from '../config/Config';
-import * as styleProps  from '../components/ui/Styles';
+import * as styleProps from '../components/ui/Styles';
 import * as actionTypes from '../constants/actions.js';
 import { formatDate } from '../components/helpers/DateFormat';
 import { hash } from '../components/helpers/Hash';
+import LoggerComponent from '../components/dryrun/LoggerComponent';
+import ImportResults from '../components/import-results/ImportResults';
 import { 
     getPrograms,
     getAttributes,
-    getOptionsInOptionGroups,
     isDuplicate, 
     createTrackedEntity,
     createEvents 
@@ -46,11 +47,13 @@ class WHONETFileReader extends React.Component {
             userAuthority : "",             
             dataElements: [],
             attributes: [],
-            optionList: [],
             counter: 0,
             emptyTrackedEntityPayload: false,
+            dryRunResult: [],
+            teiResponse: [],
         };
         this.updateData = this.updateData.bind(this);
+        this.dryRunCheck = this.dryRunCheck.bind(this);
         
             
     }
@@ -90,12 +93,6 @@ class WHONETFileReader extends React.Component {
             attributes   : response.data.trackedEntityAttributes
           });
         });
-
-        getOptionsInOptionGroups().then((response) => {
-          self.setState({
-            optionList   : response.data.options        
-          }); 
-        });
          
     }
     handleChangeFileUpload = event => {
@@ -119,17 +116,25 @@ class WHONETFileReader extends React.Component {
         console.log("Your selected file: ", event.target.files[0].name);
     };
 
-    importCSVFile = (e) => {
+    importCSVFile = (input) => {
         /**
         * Parse select csv file
         * CSV file header true
         * Loader true
         */
         const { csvfile } = this.state;
-        Papa.parse(csvfile, {
-          complete: this.updateData,
-          header  : true
-        });
+        if(input !== 'dryrun'){
+            Papa.parse(csvfile, {
+              complete: this.updateData,
+              header  : true
+            });
+        } else {
+            Papa.parse(csvfile, {
+              complete: this.dryRunCheck,
+              header  : true
+            });
+        }
+        
         
         this.setState({
             loading: true,
@@ -261,6 +266,8 @@ class WHONETFileReader extends React.Component {
         if (teiPayloadString.length > 0) {
 
             createTrackedEntity(trackedEntityJson).then(response => {
+                console.log("TEI Response: ", response.data);
+                this.setState({ teiResponse: response.data });
                 if(response.data.httpStatus === "OK" ){
                     swal("Successfully uploaded WHONET data!", {
                         icon: "success",
@@ -329,7 +336,7 @@ class WHONETFileReader extends React.Component {
             .then((willUpload) => {
                 
               if (willUpload) {
-                this.importCSVFile();
+                this.importCSVFile("import");
               } else {
                 swal({
                     title: "Your uploading file is safe!",
@@ -344,16 +351,83 @@ class WHONETFileReader extends React.Component {
     handleModal = () => {
         this.setState({ isModalOpen: !this.state.isModalOpen });
     };
+    dryRunFileCheckAlert = () =>{
 
+        let orgUnitId = document.getElementById('selectedOrgUnitId').value;
+        if(typeof orgUnitId === 'undefined' || orgUnitId === null || orgUnitId === ''){
+            swal({
+                title: "Sorry! Please select organisation unit first!",
+                icon: "warning",
+            });
+        } else if(typeof this.state.csvfile === 'undefined'){
+            swal({
+                title: "Sorry! You forgot to select your file!",
+                icon: "warning",
+            });
+        } else if(this.state.fileFormatValue !== 'csv'){
+            swal({
+                title: "Sorry! You have selected wrong file format!",
+                icon: "warning",
+            });
+        } else {
+            swal({
+              title: "Are you sure want to dry run?",
+              //text: "Once uploaded, you will not be able to recover WHONET-DHIS2 data!",
+              icon: "warning",
+              buttons: true,
+              dangerMode: true,
+            })
+            .then((willUpload) => {
+                
+              if (willUpload) {
+                this.importCSVFile("dryrun");
+              } else {
+                swal({
+                    title: "Your uploading file is safe!",
+                    icon: "success",
+                });
+              }
+            });
+        }   
+
+        
+    }
+    dryRunCheck = (result) => {
+        let orgUnitId = document.getElementById('selectedOrgUnitId').value;
+        let csvData              = result.data; 
+        for (var i = 0; i < csvData.length-1; i++) {
+            Object.entries(csvData[i]).map(([columnName, columnValue]) => {
+
+                let input = hash(columnValue.replace(/[=><_]/gi, ''));
+                isDuplicate(input, orgUnitId).then(response =>{
+                    console.log("response.data: ", response.data);
+                    this.setState({ dryRunResult: response.data });
+                });
+            });    
+            console.log("Dry run me!", this.state.dryRunResult);
+        }    
+        
+    }
     render() {
         // console.log("CTR: ", this.props.ctr);
-        let spinner, modal, userAuthority;
+        
+        let spinner, modal, userAuthority, teiResponse, dryRunButton, logger;
         if(this.state.loading){
           spinner = <LinearProgress />
-        } else if(this.state.isModalOpen){
+        } 
+        if(this.state.isModalOpen){
           modal = <MappingModal isModalOpen={this.state.isModalOpen}  handleModal={this.handleModal} />
-        } else if(this.state.userAuthority === 'ALL'){
+        } 
+        if(this.state.userAuthority === 'ALL'){
           userAuthority = <SettingsIcon onClick={this.handleModal} style={styleProps.styles.settingIcon} />;
+        } else if(false){
+            dryRunButton = <Button type="submit" raised color='accent' style = {styleProps.styles.rightSpacing} onClick={this.dryRunFileCheckAlert}>Dry Run</Button>;
+
+        } 
+        if( Object.keys(this.state.teiResponse).length > 0 || Object.entries(this.state.teiResponse).length > 0 ){
+  
+            teiResponse = <ImportResults teiResponse={this.state.teiResponse}/>
+            logger = <LoggerComponent teiResponse={this.state.teiResponse}/>
         }
 
     return (
@@ -374,7 +448,7 @@ class WHONETFileReader extends React.Component {
                   /><input
                     type="hidden" id="selectedOrgUnitId" value ={this.props.orgUnitId}
                     />
-                  <br /><br />
+                  <div style={styleProps.styles.buttonPosition}></div>
 
                   <input
                     type="file"
@@ -387,17 +461,24 @@ class WHONETFileReader extends React.Component {
                     accept=".csv"
                   />
                   <div style={styleProps.styles.buttonPosition}></div>
+                  {dryRunButton}
                   <Button type="submit" raised color='primary' onClick={this.fileUploadPreAlert}>IMPORT</Button>
 
-                  <br />                  
+                  <br /><br />                  
 
               </CardText>
               <CardText style={styleProps.styles.cardText}>
                 {spinner} 
               </CardText>
               {modal}
-
-          </Card>
+            </Card>
+            <Card style={styleProps.styles.card}>
+                <CardText style={styleProps.styles.cardText}>
+                <h3 style={styleProps.styles.cardHeader}>IMPORT RESULT</h3>
+                {teiResponse}
+                </CardText>
+            </Card>
+            {logger}
       </div>
 
     );
