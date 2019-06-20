@@ -102,13 +102,13 @@ class DataElementsTable extends React.Component {
           <TableHead>
             <TableRow>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> Data Elements</h2></strong>
+                <strong><h2> DATA ELEMENTS</h2></strong>
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> WHONET Codes </h2></strong> 
+                <strong><h2> WHONET CODES </h2></strong> 
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> Edit in DHIS2 </h2></strong> 
+                <strong><h2> EDIT IN DHIS2 </h2></strong> 
               </TableCell>
             </TableRow>
           </TableHead>
