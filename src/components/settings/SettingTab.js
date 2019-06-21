@@ -2,7 +2,6 @@ import React from 'react';
 import { Tabs, Tab } from '@dhis2/d2-ui-core';
 import DataElementsTable from './DataElementsTable';
 import AttributesTable from './AttributesTable';
-import axios from 'axios';
 class SettingTab extends React.Component {
     render(){
         return (

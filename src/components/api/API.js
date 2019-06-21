@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as config  from '../../config/Config';
-import { get, post } from './CRUD';
+import { get } from './CRUD';
 
 /**
 * Gets duplicate record
@@ -12,7 +12,7 @@ export const isDuplicate = async (input, orgUnitId) => {
 	let matchResult;
     return await get('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId+'&fields=attributes[attribute, value]')
     	.then(function (response) {
-    		if(response.data.trackedEntityInstances.length != 0){
+    		if(response.data.trackedEntityInstances.length !== 0){
 	    		if(typeof response.data.trackedEntityInstances !== 'undefined'){
 	    			duplicateValue = response.data.trackedEntityInstances[0].attributes;
 					matchResult = duplicateValue.filter(function(data){

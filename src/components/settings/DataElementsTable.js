@@ -7,7 +7,6 @@ import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import swal from 'sweetalert';
-import axios from 'axios';
 import LinearProgress from '../ui/LinearProgress';
 import * as styleProps  from '../ui/Styles';
 import * as config  from '../../config/Config';
@@ -26,8 +25,8 @@ class DataElementsTable extends React.Component {
       dataElements: [],
     };
 
-    this.handleInputChange = this.handleInputChange.bind(this);
-    this.renderDataElements        = this.renderDataElements.bind(this);
+    this.handleInputChange   = this.handleInputChange.bind(this);
+    this.renderDataElements  = this.renderDataElements.bind(this);
     this.handleSubmitElements= this.handleSubmitElements.bind(this);
   }
   componentDidMount(){
@@ -50,7 +49,7 @@ class DataElementsTable extends React.Component {
     const {id, value}  = e.target;
     let {dataElements} = this.state;
     const targetIndex  = dataElements.findIndex(datum => {
-      return datum.dataElement.id == id;
+      return datum.dataElement.id === id;
     });
 
     if(targetIndex !== -1){      
@@ -59,8 +58,7 @@ class DataElementsTable extends React.Component {
         this.setState({dataElements});
       } else {
         let json = { "attribute": { "name": config.metaAttributeName, "id": config.metaAttributeUId}, "value": value };
-        let valueArray = dataElements[targetIndex].dataElement.attributeValues.push(json);
-         valueArray= value;
+        dataElements[targetIndex].dataElement.attributeValues.push(json);
         this.setState({dataElements});
       }
      
@@ -102,13 +100,13 @@ class DataElementsTable extends React.Component {
           <TableHead>
             <TableRow>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> DATA ELEMENTS</h2></strong>
+                <strong><h3> DATA ELEMENTS</h3></strong>
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> WHONET CODES </h2></strong> 
+                <strong><h3> WHONET CODES </h3></strong> 
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> EDIT IN DHIS2 </h2></strong> 
+                <strong><h3> EDIT IN DHIS2 </h3></strong> 
               </TableCell>
             </TableRow>
           </TableHead>
@@ -137,7 +135,7 @@ class DataElementsTable extends React.Component {
     })
     .then((willUpdate) => {    
       if (willUpdate) {        
-        let j=0;
+        
         /**
         * Iterate {updateArray} that contains the updated values from settings input
         * {getElementDetails} returns the updated elements detail
@@ -148,7 +146,7 @@ class DataElementsTable extends React.Component {
         * @returns j-success message and close the loader
         */
         for (let i = 0; i < updateArray.length-1; i++) { //updateArray.length-1
-         
+          let j=0;
           if(/*updateArray[i].value !== '' && */updateArray[i].value !== 'true' ){
 
             getElementDetails(updateArray[i].id).then((response) => {
@@ -164,21 +162,23 @@ class DataElementsTable extends React.Component {
                 //console.log(jsonPayload);
                 metaDataUpdate('api/dataElements/'+updateArray[i].id, jsonPayload)
                   .then((response) => {
-                    console.log("Response: ", response.data);
+                    console.log("Console results: ", response.data);
                   });
-              });            
-            }
+                if(i === j ){
+                  this.setState({
+                    loading: false,
+                  });
+                  swal("Successfully updated meta attribute!", {
+                      icon: "success",
+                  });
+                }
+              });
+            j++;           
 
-          j++;
+          }
+         
         }
-        if(j === updateArray.length-1){
-          this.setState({
-            loading: false,
-          });
-          swal("Successfully updated meta attribute!", {
-              icon: "success",
-          });
-        }
+        
       } else {
         swal({
             title: "Your data is safe!",

@@ -10,9 +10,11 @@ const styles = {
 	card: {
 		margin: 16,
         width: 380,
-		minHeight: 379,
+		minHeight: 340,
+		maxHeight: 340,
 		float: 'left',
 		transition: 'all 175ms ease-out',
+		overflowY: 'scroll',
 	},
 	cardText: {
 		paddingTop: 0,

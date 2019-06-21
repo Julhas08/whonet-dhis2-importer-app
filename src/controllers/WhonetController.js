@@ -5,11 +5,14 @@ import Card from 'material-ui/Card/Card';
 import CardText from 'material-ui/Card/CardText';
 import {Button} from '@dhis2/d2-ui-core';
 import {InputField} from '@dhis2/d2-ui-core';
-import axios from 'axios';
 import swal from 'sweetalert';
 import LinearProgress from '../components/ui/LinearProgress';
 import MappingModal from '../components/settings/MappingModal';
-import SettingsIcon from '@material-ui/icons/Settings';
+import HelpModal from '../components/settings/HelpModal';
+import SettingsIcon from '@material-ui/icons/SettingsApplicationsRounded';
+import Fab from '@material-ui/core/Fab';
+import Icon from '@material-ui/core/Icon';
+import ViewSupportIcon from '@material-ui/icons/HelpOutlineRounded';
 import * as config  from '../config/Config';
 import * as styleProps from '../components/ui/Styles';
 import * as actionTypes from '../constants/actions.js';
@@ -22,13 +25,12 @@ import {
     getAttributes,
     isDuplicate, 
     createTrackedEntity,
-    createEvents 
 } from '../components/api/API';
 
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
   width: (styleProps.styles.card.width * 3) + (styleProps.styles.card.margin * 4),
 });
-const fetchOptions = config.fetchOptions;
+
 class WHONETFileReader extends React.Component {
     constructor(props) {
         super(props);
@@ -36,13 +38,13 @@ class WHONETFileReader extends React.Component {
         this.state = {
             csvfile     : undefined,
             orgUnitField: '',
-            d2          : d2,
-            teiResponse : '',        
+            d2          : d2,        
             loading     : false,
             error       : false,
             userOrgUnitName: props.orgUnit,
             fileFormatValue: '',
-            isModalOpen: false,
+            isSettingModalOpen: false,
+            isHelpModalOpen: false,
             userRoles  : "",
             userAuthority : "",             
             dataElements: [],
@@ -51,6 +53,7 @@ class WHONETFileReader extends React.Component {
             emptyTrackedEntityPayload: false,
             dryRunResult: [],
             teiResponse: [],
+            teiResponseString: "",
         };
         this.updateData = this.updateData.bind(this);
         this.dryRunCheck = this.dryRunCheck.bind(this);
@@ -144,11 +147,9 @@ class WHONETFileReader extends React.Component {
     updateData(result) {
         let csvData              = result.data;    
         let teiPayloadString     = [];
-        let eventsPayloadString  = [];
         let elementId    = "";
         let attributeId  = "";
         let elementValue = "";
-        let elementPayload = [];
         let orgUnitId = document.getElementById('selectedOrgUnitId').value;
         let trackedEntityJson, eventDate;
 
@@ -167,7 +168,7 @@ class WHONETFileReader extends React.Component {
                     return attribute.value !== 'true' || attribute.value !== '';
                 });
                 if(metaAttributeValue.length > 0){                    
-                    return metaAttributeValue[0].value == columnName;
+                    return metaAttributeValue[0].value === columnName;
                 }
                               
             }); 
@@ -203,7 +204,7 @@ class WHONETFileReader extends React.Component {
             //console.log("this.state.attributes: ", this.state.attributes);
             let attributesFilterResult = this.state.attributes.filter(function(element) {
                 if(element.attributeValues.length >= 1){                   
-                    return element.attributeValues[0].value == columnName;
+                    return element.attributeValues[0].value === columnName;
                 }                              
             });
 
@@ -267,7 +268,10 @@ class WHONETFileReader extends React.Component {
 
             createTrackedEntity(trackedEntityJson).then(response => {
                 console.log("TEI Response: ", response.data);
-                this.setState({ teiResponse: response.data });
+                this.setState({ 
+                    teiResponse: response.data,
+                    teiResponseString: JSON.stringify(response.data),
+                });
                 if(response.data.httpStatus === "OK" ){
                     swal("Successfully uploaded WHONET data!", {
                         icon: "success",
@@ -348,8 +352,15 @@ class WHONETFileReader extends React.Component {
 
         
     }
-    handleModal = () => {
-        this.setState({ isModalOpen: !this.state.isModalOpen });
+    handleSettingModal = () => {
+        this.setState({ 
+            isSettingModalOpen: !this.state.isSettingModalOpen,
+        });
+    };
+    handleHelpModal = () => {
+        this.setState({ 
+            isHelpModalOpen:  !this.state.isHelpModalOpen,
+        });
     };
     dryRunFileCheckAlert = () =>{
 
@@ -403,6 +414,7 @@ class WHONETFileReader extends React.Component {
                     console.log("response.data: ", response.data);
                     this.setState({ dryRunResult: response.data });
                 });
+               return null; 
             });    
             console.log("Dry run me!", this.state.dryRunResult);
         }    
@@ -415,20 +427,29 @@ class WHONETFileReader extends React.Component {
         if(this.state.loading){
           spinner = <LinearProgress />
         } 
-        if(this.state.isModalOpen){
-          modal = <MappingModal isModalOpen={this.state.isModalOpen}  handleModal={this.handleModal} />
+        if(this.state.isSettingModalOpen){
+          modal = <MappingModal isModalOpen={this.state.isSettingModalOpen}  handleModal={this.handleSettingModal} />
         } 
         if(this.state.userAuthority === 'ALL'){
-          userAuthority = <SettingsIcon onClick={this.handleModal} style={styleProps.styles.settingIcon} />;
-        } else if(false){
+          userAuthority = <Fab color='primary' aria-label="Edit" onClick={this.handleSettingModal} style={styleProps.styles.helpModalPosition}>
+            <SettingsIcon style={styleProps.styles.settingIcon} />
+          </Fab>;
+        } 
+        if(false){
             dryRunButton = <Button type="submit" raised color='accent' style = {styleProps.styles.rightSpacing} onClick={this.dryRunFileCheckAlert}>Dry Run</Button>;
 
         } 
         if( Object.keys(this.state.teiResponse).length > 0 || Object.entries(this.state.teiResponse).length > 0 ){
   
-            teiResponse = <ImportResults teiResponse={this.state.teiResponse}/>
-            logger = <LoggerComponent teiResponse={this.state.teiResponse}/>
+            teiResponse = <ImportResults teiResponse={this.state.teiResponse} />
+            logger = <LoggerComponent teiResponse={this.state.teiResponse}  teiResponseString={this.state.teiResponseString}/>
         }
+        if(this.state.isHelpModalOpen){
+            modal = <HelpModal isModalOpen={this.state.isHelpModalOpen}  handleModal={this.handleHelpModal} />
+        }
+        let helpModal = <Fab color="primary" aria-label="Edit" onClick={this.handleHelpModal} style={styleProps.styles.helpModalPosition}>
+                       <ViewSupportIcon />
+                      </Fab>
 
     return (
       <div>
@@ -474,7 +495,7 @@ class WHONETFileReader extends React.Component {
             </Card>
             <Card style={styleProps.styles.card}>
                 <CardText style={styleProps.styles.cardText}>
-                <h3 style={styleProps.styles.cardHeader}>IMPORT RESULT</h3>
+                <h3 style={styleProps.styles.cardHeader}>IMPORT RESULT {helpModal}</h3>
                 {teiResponse}
                 </CardText>
             </Card>

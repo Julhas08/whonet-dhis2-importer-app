@@ -7,7 +7,6 @@ import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import swal from 'sweetalert';
-import axios from 'axios';
 import LinearProgress from '../ui/LinearProgress';
 import * as styleProps  from '../ui/Styles';
 import * as config  from '../../config/Config';
@@ -50,7 +49,7 @@ class AttributesTable extends React.Component {
     const {id, value}  = e.target;
     let {attributes}   = this.state;
     const targetIndex  = attributes.findIndex(datum => {
-      return datum.id == id;
+      return datum.id === id;
     });
 
     if(targetIndex !== -1){      
@@ -59,8 +58,7 @@ class AttributesTable extends React.Component {
         this.setState({attributes});
       } else {
         let json = { "attribute": { "name": config.metaAttributeName, "id": config.metaAttributeUId}, "value": value };
-        let valueArray = attributes[targetIndex].attributeValues.push(json);
-         valueArray= value;
+        attributes[targetIndex].attributeValues.push(json);
         this.setState({attributes});
       }
      
@@ -101,13 +99,13 @@ class AttributesTable extends React.Component {
           <TableHead>
             <TableRow>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> ATTRIBUTES</h2></strong>
+                <strong><h3> ATTRIBUTES</h3></strong>
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> WHONET CODES </h2></strong> 
+                <strong><h3> WHONET CODES </h3></strong> 
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> EDIT IN DHIS2 </h2></strong> 
+                <strong><h3> EDIT IN DHIS2 </h3></strong> 
               </TableCell>
             </TableRow>
           </TableHead>
@@ -136,7 +134,7 @@ class AttributesTable extends React.Component {
     })
     .then((willUpdate) => {    
       if (willUpdate) {        
-        let j=0;
+        
         /**
         * Iterate {updateArray} that contains the updated values from settings input
         * {getAttributeDetails} returns the updated attributes detail
@@ -146,8 +144,9 @@ class AttributesTable extends React.Component {
         * {metaDataUpdate} does the `PUT` operations and return messages
         * @returns j-success message and close the loader
         */
+
         for (let i = 0; i < updateArray.length-1; i++) { //updateArray.length-1
-         
+          let j=0;
           if(/*updateArray[i].value !== '' &&*/ updateArray[i].value !== 'true' ){
 
             getAttributeDetails(updateArray[i].id).then((response) => {
@@ -163,21 +162,21 @@ class AttributesTable extends React.Component {
                 //console.log("jsonPayload Attribute: ", jsonPayload);
                 metaDataUpdate('api/trackedEntityAttributes/'+updateArray[i].id, jsonPayload)
                   .then((response) => {
-                    console.log("Response: ", response.data);
+                    console.log("Console results: ", response.data);
+                });
+                if(i === j ){
+                  this.setState({
+                    loading: false,
                   });
-              });            
-            }
+                  swal("Successfully updated meta attribute!", {
+                      icon: "success",
+                  });
+                }  
+              });
+              j++;            
+          }        
+        }
 
-          j++;
-        }
-        if(j === updateArray.length-1){
-          this.setState({
-            loading: false,
-          });
-          swal("Successfully updated meta attribute!", {
-              icon: "success",
-          });
-        }
       } else {
         swal({
             title: "Your data is safe!",

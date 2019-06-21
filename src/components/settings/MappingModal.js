@@ -4,12 +4,11 @@ import { withStyles } from '@material-ui/core/styles';
 import Modal from '@material-ui/core/Modal';
 import Card from 'material-ui/Card/Card';
 import CardText from 'material-ui/Card/CardText';
-import axios from 'axios';
 import Tabs from './SettingTab';
 import Close from '@material-ui/icons/Close';
 import * as styleProps  from '../ui/Styles';
 
-class SimpleModal extends React.Component {
+class MappingModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -18,8 +17,6 @@ class SimpleModal extends React.Component {
   }  
 
   render() {
-    const { classes } = this.props;
-
     return (
       <div>
         <Modal
@@ -41,11 +38,11 @@ class SimpleModal extends React.Component {
   }
 }
 
-SimpleModal.propTypes = {
+MappingModal.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
 // We need an intermediary variable for handling the recursive nesting.
-const SimpleModalWrapped = withStyles(styleProps.styles)(SimpleModal);
+const MappingModalWrapped = withStyles(styleProps.styles)(MappingModal);
 
-export default SimpleModalWrapped;
+export default MappingModalWrapped;

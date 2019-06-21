@@ -1,18 +1,19 @@
-import { makeStyles } from '@material-ui/core/styles';
 export const styles = {
   card: {
     margin: 16,
     width: 380,
-    minHeight: 379,
+    minHeight: 340,
     float: 'left',
     transition: 'all 175ms ease-out',
   },
   cardDryRun: {
     margin: 16,
     width: 1210,
-    minHeight: 150,
+    maxHeight: 195,
+    minHeight: 195,
     float: 'left',
     transition: 'all 175ms ease-out',
+    overflowY: 'scroll',
   },
   inputText: {
     borderTop: 'none',
@@ -62,11 +63,24 @@ export const styles = {
     justifyContent: 'space-between',
   },
   buttonPosition: {
-    marginTop: '60px',
+    marginTop: '40px',
   },
   settingIcon: {
     float: 'right',
     pointer: 'cursor',
+  },
+  helpModalPosition: {
+    float: 'right',
+    pointer: 'cursor',
+    float: 'right',
+    marginTop: '-7px',
+    height: '36px',
+    width: '36px',
+  },  
+  modalInnerScroll: {
+    overflowY: 'scroll',
+    maxHeight: '450px',
+    minHeight: '450px',
   },
   closeIcon: {
     float: 'right',
@@ -75,32 +89,35 @@ export const styles = {
   tableScroll: {
         maxHeight: '415px',
         overflowY: 'scroll',
-    },
-    tableHeader: {
-      width: '120px'
-    },
-    submitButton: {
-        backgroundColor: '#1976D2', 
-        border: 'none',
-        color: 'white',
-        padding: '9px 20px',
-        textAlign: 'center',
-        textDecoration: 'none',
-        display: 'inline-block',
-        fontSize: '18px',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        float: 'right',
-    },
-    inputField: {
-      display: 'none',
-    },
-    labelUpload: {
-      cursor: 'pointer',
-      padding: '28px 10px',
-      color: '#fff',
-      background: '#00f',
-      borderRadius: '50%',
-    }
+  },
+  tableHeader: {
+    width: '120px'
+  },
+  paragarphWrap: {
+     wordWrap: 'break-word',
+  },
+  submitButton: {
+    backgroundColor: '#1976D2', 
+    border: 'none',
+    color: 'white',
+    padding: '9px 20px',
+    textAlign: 'center',
+    textDecoration: 'none',
+    display: 'inline-block',
+    fontSize: '18px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    float: 'right',
+  },
+  inputField: {
+    display: 'none',
+  },
+  labelUpload: {
+    cursor: 'pointer',
+    padding: '28px 10px',
+    color: '#fff',
+    background: '#00f',
+    borderRadius: '50%',
+  }
 
 };
