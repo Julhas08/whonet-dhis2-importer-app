@@ -1,6 +1,8 @@
 import axios from 'axios';
 import * as config  from '../../config/Config';
 import { get } from './CRUD';
+import { request } from './Request';
+
 
 /**
 * Gets duplicate record
@@ -8,16 +10,30 @@ import { get } from './CRUD';
 * @returns {Object} duplicate values
 */
 export const isDuplicate = async (input, orgUnitId) => {
+
+
+
 	let duplicateValue=[];
 	let matchResult;
-    return await get('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId+'&fields=attributes[attribute, value]')
+    return await get(request('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId, {
+            order: 'created:asc',
+            fields: 'attributes[attribute,value]',
+            //filters: `${duplicateValue}:eq:${input}`,
+            //options: [`trackedEntityInstance=${entity}`],
+        }))
     	.then(function (response) {
+    		
     		if(response.data.trackedEntityInstances.length !== 0){
 	    		if(typeof response.data.trackedEntityInstances !== 'undefined'){
+
 	    			duplicateValue = response.data.trackedEntityInstances[0].attributes;
+	    			console.log("duplicateValue: ", duplicateValue);
+	    			
+
 					matchResult = duplicateValue.filter(function(data){
 						return data.value === input;
 					});
+					console.log("matchResult: ", matchResult);
 					return matchResult;
 	    		}
     		}
@@ -25,7 +41,7 @@ export const isDuplicate = async (input, orgUnitId) => {
 		})
 		.catch(function (error) {
 			// handle error
-			console.log(error);
+			console.log(error.response.data);
 		});
    
 };

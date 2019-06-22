@@ -5,8 +5,8 @@
 * Return default date if the format is ok
 */ 
 function AddLeadingZero(num) {
-  console.log("Number:", num);
-  return (num < 10 ? '0' : '') + num;
+  let number = Number.parseInt(num, 10);
+  return (number < 10 ? '0' : '') + number;
 }
 
 export function formatDate(date) {

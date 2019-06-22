@@ -5,7 +5,6 @@ import * as styleProps  from '../ui/Styles';
 
 export default class LoggerComponent extends React.Component {
 	render () {
-        console.log("this.props.teiResponseString: ", this.props.teiResponseString);
 		return (
             <div>
                 <Card style={styleProps.styles.cardDryRun}>

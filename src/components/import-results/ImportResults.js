@@ -7,9 +7,54 @@ import * as styleProps  from '../ui/Styles';
 
 export default class ImportResults extends React.Component {
 	render () {
-		return (
-            <div>
-              <Table>
+		let tableData;
+		if(this.props.teiResponse.status === 'ERROR'){
+			tableData = <Table>
+	          <TableBody>            
+	            <TableRow>
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          Imported
+		          </TableCell> 
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          0
+		          </TableCell>
+		        </TableRow> 
+		        <TableRow>
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          Updated
+		          </TableCell> 
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          0
+		          </TableCell>
+		        </TableRow>   
+		        <TableRow>
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          Ignored
+		          </TableCell> 
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          0
+		          </TableCell>
+		        </TableRow>
+		        <TableRow>
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          Deleted
+		          </TableCell> 
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          0
+		          </TableCell>
+		        </TableRow>  
+		        <TableRow>
+		          <TableCell style={styleProps.styles.tableHeader}>
+		          Error
+		          </TableCell> 
+		          <TableCell style={styleProps.styles.tableHeader}>
+		           1
+		          </TableCell>
+		        </TableRow>            
+	          </TableBody>          
+	        </Table>
+		} else {
+			tableData = <Table>
 	          <TableBody>            
 	            <TableRow>
 		          <TableCell style={styleProps.styles.tableHeader}>
@@ -53,6 +98,11 @@ export default class ImportResults extends React.Component {
 		        </TableRow>            
 	          </TableBody>          
 	        </Table>
+		}
+
+		return (
+            <div>
+            	{tableData}
             </div>
 		);
 	}

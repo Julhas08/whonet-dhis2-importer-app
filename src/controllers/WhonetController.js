@@ -212,11 +212,15 @@ class WHONETFileReader extends React.Component {
                 let attributeValue;
                 let duplicateData = "";
                 let matchResult = columnValue.match(/\//g);
+                
                 if (matchResult !== null && matchResult.length === 2){
                     attributeValue = formatDate(columnValue);
-                } else if(columnName === config.patientIdColumn){
-                    
-                    isDuplicate(attributeValue, orgUnitId).then(attributes => {
+                } 
+
+                if(columnName === config.patientIdColumn){
+                    console.log("attributeValue: ", attributeValue);
+                    isDuplicate(hash(columnValue.replace(/[=><_]/gi, '')), orgUnitId).then(attributes => {
+                        console.log("attributes: ", attributes);
                         if(typeof attributes !== 'undefined'){
                           if(attributes.length > 0){
                             duplicateData = "Duplicate Attribute ID: "+attributes[0].attribute + " & value: " + attributes[0].value;
@@ -267,7 +271,6 @@ class WHONETFileReader extends React.Component {
         if (teiPayloadString.length > 0) {
 
             createTrackedEntity(trackedEntityJson).then(response => {
-                console.log("TEI Response: ", response.data);
                 this.setState({ 
                     teiResponse: response.data,
                     teiResponseString: JSON.stringify(response.data),
@@ -288,16 +291,35 @@ class WHONETFileReader extends React.Component {
                     });
                 } 
             }).catch(error => {
-                swal("Something went wrong! "+ error, {
-                    icon: "warning",
-                });
-                this.setState({
-                    loading: false
-                });
-                console.warn(error);
+
+                if (error.response) {
+                    /**
+                     * The request was made and the server responded with a
+                     * status code that falls out of the range of 2xx
+                     */
+                    swal("Something went wrong! "+ error.response.data.message, {
+                        icon: "warning",
+                    });
+                    this.setState({ 
+                        teiResponse: error.response.data,
+                        teiResponseString: JSON.stringify(error.response.data),
+                        loading: false
+                    });
+                } else if (error.request) {
+                    /*
+                     * The request was made but no response was received, `error.request`
+                     * is an instance of XMLHttpRequest in the browser and an instance
+                     * of http.ClientRequest in Node.js
+                     */
+                    console.log(error.request);
+                } else {
+                    // Something happened in setting up the request and triggered an Error
+                    console.log('Error', error.message);
+                }
+                console.log(error.config);
             });
         } else {
-            swal("Sorry! The prepared JSON payload is empty. Please check your CSV file data.", {
+            swal("Sorry! Your prepared JSON payload is empty. Please check your CSV file data.", {
                 icon: "warning",
             });
             this.setState({
