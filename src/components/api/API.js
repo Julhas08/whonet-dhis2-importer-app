@@ -3,7 +3,31 @@ import * as config  from '../../config/Config';
 import { get } from './CRUD';
 import { request } from './Request';
 
-
+/**
+* Check the selected org unit is assigned under this program or not
+* If does not assign then to stop the import
+*/
+export const checkOrgUnitInProgram = async (orgUnitId) => {
+    return await get(request('api/programs/'+config.programId+'.json?', {
+        order: 'created:asc',
+        fields: 'id,name,organisationUnits',
+        filters: `organisationUnits.id:eq:${orgUnitId}`,
+        //options: [`trackedEntityInstance=${entity}`],
+    }))
+	.then(function (responseObj) {
+		
+		if(Object.entries(responseObj.data).length !== 0) {
+			console.log(responseObj);
+			return responseObj.data.organisationUnits.filter(function(orgUnit) {
+            	return orgUnit.id === orgUnitId;  
+        	});	
+		}
+				
+	})
+	.catch(function (error) {
+		console.log(error.response.data);
+	});   
+};
 /**
 * Gets duplicate record
 * @param {String} input - hashed patient id

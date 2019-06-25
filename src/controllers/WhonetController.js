@@ -25,6 +25,7 @@ import {
     getAttributes,
     isDuplicate, 
     createTrackedEntity,
+    checkOrgUnitInProgram
 } from '../components/api/API';
 
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
@@ -159,17 +160,12 @@ class WHONETFileReader extends React.Component {
 
             /**
             * {Object.entries} iterates csv data from the selected csv file
-            * @returns {resultMappedElement} the meta attribute value that matched with csv column name and {metaAttributeValue} makes sure only the value that is not empty or true type   
+            * @returns {resultMappedElement} matched elements code
             **/  
             Object.entries(csvData[i]).map(([columnName, columnValue]) => {
 
-            let resultMappedElement = this.state.dataElements.filter(function(element) {
-                let metaAttributeValue = element.dataElement.attributeValues.filter(function(attribute){
-                    return attribute.value !== 'true' || attribute.value !== '';
-                });
-                if(metaAttributeValue.length > 0){                    
-                    return metaAttributeValue[0].value === columnName;
-                }
+            let resultMappedElement = this.state.dataElements.filter(function(element) {                
+                return element.dataElement.code === columnName
                               
             }); 
             
@@ -202,10 +198,8 @@ class WHONETFileReader extends React.Component {
             * @returns {null} end iteration
             */   
             //console.log("this.state.attributes: ", this.state.attributes);
-            let attributesFilterResult = this.state.attributes.filter(function(element) {
-                if(element.attributeValues.length >= 1){                   
-                    return element.attributeValues[0].value === columnName;
-                }                              
+            let attributesFilterResult = this.state.attributes.filter(function(attribute) {
+                return attribute.code === columnName;                             
             });
 
             if(attributesFilterResult.length >= 1){
@@ -216,25 +210,24 @@ class WHONETFileReader extends React.Component {
                 if (matchResult !== null && matchResult.length === 2){
                     attributeValue = formatDate(columnValue);
                 } 
-
-                if(columnName === config.patientIdColumn){
-                    console.log("attributeValue: ", attributeValue);
-                    isDuplicate(hash(columnValue.replace(/[=><_]/gi, '')), orgUnitId).then(attributes => {
-                        console.log("attributes: ", attributes);
-                        if(typeof attributes !== 'undefined'){
-                          if(attributes.length > 0){
-                            duplicateData = "Duplicate Attribute ID: "+attributes[0].attribute + " & value: " + attributes[0].value;
-                            console.warn("Found duplicate! See results: "+ duplicateData)
-                          }  
-                        } else {
-                            attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
-                        }
-                        
-                    });
-                    attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
-                } else {
-                    attributeValue = columnValue.replace(/[=><_]/gi, '');
-                } 
+                if(columnName === config.patientIdColumn ){
+                        console.log("attributeValue: ", attributeValue);
+                        isDuplicate(hash(columnValue.replace(/[=><_]/gi, '')), orgUnitId).then(attributes => {
+                            console.log("attributes: ", attributes);
+                            if(typeof attributes !== 'undefined'){
+                              if(attributes.length > 0){
+                                duplicateData = "Duplicate Attribute ID: "+attributes[0].attribute + " & value: " + attributes[0].value;
+                                console.warn("Found duplicate! See results: "+ duplicateData)
+                              }  
+                            } else {
+                                attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
+                            }
+                            
+                        });
+                        attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
+                    } else {
+                        attributeValue = columnValue.replace(/[=><_]/gi, '');
+                    } 
                 attributeId = attributesFilterResult[0].id;
                 teiPayload.push({"attribute": attributeId, "value": attributeValue});
             }  
@@ -269,7 +262,6 @@ class WHONETFileReader extends React.Component {
         trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadString)+'}';
         console.log("Final trackedEntityJson payload: ", trackedEntityJson);
         if (teiPayloadString.length > 0) {
-
             createTrackedEntity(trackedEntityJson).then(response => {
                 this.setState({ 
                     teiResponse: response.data,
@@ -318,6 +310,7 @@ class WHONETFileReader extends React.Component {
                 }
                 console.log(error.config);
             });
+            
         } else {
             swal("Sorry! Your prepared JSON payload is empty. Please check your CSV file data.", {
                 icon: "warning",
@@ -332,7 +325,11 @@ class WHONETFileReader extends React.Component {
     onChangeValue = (field, value) => {
         this.setState({ [field]: value });
     };
-
+    /**
+    * {orgUnitId} returns selected org unit from left sidebar
+    * {checkOrgUnitInProgram} returns whether the selected org unit assigned or not
+    * If does not assign then prevent the file upload
+    */
     fileUploadPreAlert = () =>{
 
         let orgUnitId = document.getElementById('selectedOrgUnitId').value;
@@ -362,7 +359,20 @@ class WHONETFileReader extends React.Component {
             .then((willUpload) => {
                 
               if (willUpload) {
-                this.importCSVFile("import");
+                checkOrgUnitInProgram(orgUnitId).then( result =>{
+                    console.log("result: ", result);
+                    if(typeof result !== 'undefined'){
+                        if( result.length > 0){
+                         //this.importCSVFile("import");   
+                        }                        
+                    } else {
+                        swal({
+                            title: "Sorry your selected org unit was not assigned in this program. Please assign first!",
+                            icon: "error",
+                        });
+                    }
+                });
+
               } else {
                 swal({
                     title: "Your uploading file is safe!",

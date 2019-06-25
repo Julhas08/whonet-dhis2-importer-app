@@ -29,7 +29,7 @@ class DataElementsTable extends React.Component {
     this.renderDataElements  = this.renderDataElements.bind(this);
     this.handleSubmitElements= this.handleSubmitElements.bind(this);
   }
-  componentDidMount(){
+  componentWillMount(){
     let self = this;
       getPrograms().then((response) => {
         self.setState({
@@ -52,13 +52,14 @@ class DataElementsTable extends React.Component {
       return datum.dataElement.id === id;
     });
 
-    if(targetIndex !== -1){      
-      if(dataElements[targetIndex].dataElement.attributeValues.length > 0 ){
-        dataElements[targetIndex].dataElement.attributeValues[0].value = value;
+    if(targetIndex !== -1){ 
+      if(dataElements[targetIndex].dataElement.code !== '' || typeof dataElements[targetIndex].dataElement.code !== 'undefined' ){
+        dataElements[targetIndex].dataElement.code = value;
         this.setState({dataElements});
       } else {
-        let json = { "attribute": { "name": config.metaAttributeName, "id": config.metaAttributeUId}, "value": value };
-        dataElements[targetIndex].dataElement.attributeValues.push(json);
+        /*let json = { "code": { "name": config.metaAttributeName, "id": config.metaAttributeUId}, "value": value };
+        dataElements[targetIndex].dataElement.attributeValues.push(json);*/
+        dataElements[targetIndex].dataElement.code=value;
         this.setState({dataElements});
       }
      
@@ -69,13 +70,14 @@ class DataElementsTable extends React.Component {
     const {dataElements} = this.state;
     let content = dataElements.map(datum => {
       let editUrl = config.baseUrl+"dhis-web-maintenance/#/edit/dataElementSection/dataElement/"+datum.dataElement.id;
+      //datum.dataElement.attributeValues.map( val => val.value) for meta attributes
       return (
         <TableRow key={datum.dataElement.id}>
           <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
             {datum.dataElement.name}
           </TableCell>
           <TableCell style={styleProps.styles.tableHeader}>
-          <input type="text" id={datum.dataElement.id} value={datum.dataElement.attributeValues.map( val => val.value)}
+          <input type="text" id={datum.dataElement.id} value={datum.dataElement.code || ''}
             onChange={this.handleInputChange} style={styleProps.styles.inputText}/>
           </TableCell>  
           <TableCell style={styleProps.styles.tableHeader}>
@@ -157,9 +159,13 @@ class DataElementsTable extends React.Component {
                 } else {
                   attributeId = config.metaAttributeUId;
                 }
-                 
-                let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});
-                //console.log(jsonPayload);
+                
+                /**
+                * This below commented json was developed for meta attributes value update 
+                * Keep this code until final deployment
+                */ 
+                //let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});   
+                let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"code": updateArray[i].value});
                 metaDataUpdate('api/dataElements/'+updateArray[i].id, jsonPayload)
                   .then((response) => {
                     console.log("Console results: ", response.data);

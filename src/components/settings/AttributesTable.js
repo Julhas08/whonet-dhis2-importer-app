@@ -57,8 +57,9 @@ class AttributesTable extends React.Component {
         attributes[targetIndex].attributeValues[0].value = value;
         this.setState({attributes});
       } else {
-        let json = { "attribute": { "name": config.metaAttributeName, "id": config.metaAttributeUId}, "value": value };
-        attributes[targetIndex].attributeValues.push(json);
+        /*let json = { "attribute": { "name": config.metaAttributeName, "id": config.metaAttributeUId}, "value": value };
+        attributes[targetIndex].attributeValues.push(json);*/
+        attributes[targetIndex].code = value;
         this.setState({attributes});
       }
      
@@ -75,7 +76,7 @@ class AttributesTable extends React.Component {
             {datum.name}
           </TableCell>
           <TableCell style={styleProps.styles.tableHeader}>
-          <input type="text" id={datum.id} value={datum.attributeValues.map( val => val.value)}
+          <input type="text" id={datum.id} value={datum.code}
             onChange={this.handleInputChange} style={styleProps.styles.inputText}/>
           </TableCell> 
           <TableCell style={styleProps.styles.tableHeader}>
@@ -87,37 +88,37 @@ class AttributesTable extends React.Component {
           </TableCell>          
         </TableRow>
       )
-    });
-    let spinner;
-    if(this.state.loading){
-      spinner = <LinearProgress />
-    }
-    return (
-      <Paper className={classes.root}  style={styleProps.styles.tableScroll}>
-        <form onSubmit={(e) => this.handleSubmitAttributes(e)} id="whonetsetting">
-        <Table className={classes.table}>
-          <TableHead>
-            <TableRow>
-              <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h3> ATTRIBUTES</h3></strong>
-              </TableCell>
-              <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h3> WHONET CODES </h3></strong> 
-              </TableCell>
-              <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h3> EDIT IN DHIS2 </h3></strong> 
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>            
-            {content}             
-          </TableBody>          
-        </Table>
-        <input type="submit" value="Save Attributes" style={styleProps.styles.submitButton}/>
-        </form> 
-        {spinner}
-      </Paper>
-    )
+      });
+      let spinner;
+      if(this.state.loading){
+        spinner = <LinearProgress />
+      }
+      return (
+        <Paper className={classes.root}  style={styleProps.styles.tableScroll}>
+          <form onSubmit={(e) => this.handleSubmitAttributes(e)} id="whonetsetting">
+          <Table className={classes.table}>
+            <TableHead>
+              <TableRow>
+                <TableCell style={styleProps.styles.tableHeader}> 
+                  <strong><h3> ATTRIBUTES</h3></strong>
+                </TableCell>
+                <TableCell style={styleProps.styles.tableHeader}> 
+                  <strong><h3> WHONET CODES </h3></strong> 
+                </TableCell>
+                <TableCell style={styleProps.styles.tableHeader}> 
+                  <strong><h3> EDIT IN DHIS2 </h3></strong> 
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>            
+              {content}             
+            </TableBody>          
+          </Table>
+          <input type="submit" value="Save Attributes" style={styleProps.styles.submitButton}/>
+          </form> 
+          {spinner}
+        </Paper>
+      )
   }
   handleSubmitAttributes(e) {
     this.setState({ // need to upgrade this logic
@@ -158,7 +159,8 @@ class AttributesTable extends React.Component {
                   attributeId = config.metaAttributeUId;
                 }
                  
-                let jsonPayload = JSON.stringify({"name": customAttributeString.name,"shortName": customAttributeString.shortName,"aggregationType": customAttributeString.aggregationType,"domainType": customAttributeString.domainType,"valueType": customAttributeString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});
+                //let jsonPayload = JSON.stringify({"name": customAttributeString.name,"shortName": customAttributeString.shortName,"aggregationType": customAttributeString.aggregationType,"domainType": customAttributeString.domainType,"valueType": customAttributeString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});
+                let jsonPayload = JSON.stringify({"name": customAttributeString.name,"shortName": customAttributeString.shortName,"aggregationType": customAttributeString.aggregationType,"domainType": customAttributeString.domainType,"valueType": customAttributeString.valueType,"code": updateArray[i].value});
                 //console.log("jsonPayload Attribute: ", jsonPayload);
                 metaDataUpdate('api/trackedEntityAttributes/'+updateArray[i].id, jsonPayload)
                   .then((response) => {
