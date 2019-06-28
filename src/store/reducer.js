@@ -10,7 +10,9 @@ const reducer = (state = initialState, action) =>{
 		case actionTypes.UPLOAD_PRE_ALERT:
 			const newState = Object.assign({},state);
 			newState.counter = state.counter+1; 
-			return newState; 			
+			return newState;
+		default:
+			return 0;	 			
 
 	}
 	return state;

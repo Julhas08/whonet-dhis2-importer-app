@@ -15,6 +15,15 @@ export const styles = {
     transition: 'all 175ms ease-out',
     overflowY: 'scroll',
   },
+  csvMappingCard: {
+    margin: 16,
+    width: 1210,
+    maxHeight: 400,
+    minHeight: 400,
+    float: 'left',
+    transition: 'all 175ms ease-out',
+    overflowY: 'scroll',
+  },
   inputText: {
     borderTop: 'none',
     borderLeft: 'none',
@@ -42,6 +51,26 @@ export const styles = {
     margin: '16px -16px',
     borderBottom: '1px solid #eeeeee',
   },
+  cardHeaderMapping:{
+    padding: '0 16px 16px',
+    margin: '16px -16px',
+    color: '#004BA0',
+    borderBottom: '1px solid #eeeeee',
+  },
+  colors: {
+    color1: {
+     color: 'red',
+     fontStyle: 'italic',
+    },
+    color2: {
+     color: 'green',
+     fontWeight: 'bold',
+    },
+    color3: {
+      color: '#2e86c1',
+      fontWeight: 'bold',
+    }
+  }, 
   cardHeaderModal: {
     padding: '13px 16px 16px',
     margin: '0px',
@@ -72,7 +101,6 @@ export const styles = {
   helpModalPosition: {
     float: 'right',
     pointer: 'cursor',
-    float: 'right',
     marginTop: '-7px',
     height: '36px',
     width: '36px',

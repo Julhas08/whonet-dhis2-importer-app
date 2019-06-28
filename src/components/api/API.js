@@ -15,9 +15,8 @@ export const checkOrgUnitInProgram = async (orgUnitId) => {
         //options: [`trackedEntityInstance=${entity}`],
     }))
 	.then(function (responseObj) {
-		
+	
 		if(Object.entries(responseObj.data).length !== 0) {
-			console.log(responseObj);
 			return responseObj.data.organisationUnits.filter(function(orgUnit) {
             	return orgUnit.id === orgUnitId;  
         	});	
@@ -35,8 +34,6 @@ export const checkOrgUnitInProgram = async (orgUnitId) => {
 */
 export const isDuplicate = async (input, orgUnitId) => {
 
-
-
 	let duplicateValue=[];
 	let matchResult;
     return await get(request('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId, {
@@ -50,7 +47,7 @@ export const isDuplicate = async (input, orgUnitId) => {
     		if(response.data.trackedEntityInstances.length !== 0){
 	    		if(typeof response.data.trackedEntityInstances !== 'undefined'){
 
-	    			duplicateValue = response.data.trackedEntityInstances[0].attributes;
+	    			/*duplicateValue = response.data.trackedEntityInstances[0].attributes;
 	    			console.log("duplicateValue: ", duplicateValue);
 	    			
 
@@ -58,7 +55,9 @@ export const isDuplicate = async (input, orgUnitId) => {
 						return data.value === input;
 					});
 					console.log("matchResult: ", matchResult);
-					return matchResult;
+					return matchResult;*/
+
+					return true;
 	    		}
     		}
 			
@@ -75,8 +74,15 @@ export const createTrackedEntity = async (trackedEntityJson) => {
         method: 'POST',
         headers: config.fetchOptions.headers,
         data: trackedEntityJson,
-    })
-   
+    }) 
+};
+
+export const updateTrackedEntity = async (trackedEntityJson) => {
+    return await axios(config.baseUrl+'api/trackedEntityInstances', {
+        method: 'PUT',
+        headers: config.fetchOptions.headers,
+        data: trackedEntityJson,
+    }) 
 };
 
 export const getPrograms = async () => {

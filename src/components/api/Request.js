@@ -9,6 +9,5 @@ export const request = (
     if (filters) url += `&filter=${filters}`
     if (order) url += `&order=${order}`
     if (options) url += `&${options.join('&')}`
-    	console.log(url);
     return url
 }
