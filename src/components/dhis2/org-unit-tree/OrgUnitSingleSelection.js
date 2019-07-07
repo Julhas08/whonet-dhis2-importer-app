@@ -1,6 +1,6 @@
 import React from 'react';
 import { OrgUnitTree } from '@dhis2/d2-ui-org-unit-tree';
-class SingleSelection extends React.Component {
+class OrgUnitSingleSelection extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -38,4 +38,4 @@ class SingleSelection extends React.Component {
     }
 }
 
-export default SingleSelection;
+export default OrgUnitSingleSelection;

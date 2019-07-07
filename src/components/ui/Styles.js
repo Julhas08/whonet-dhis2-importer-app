@@ -1,4 +1,13 @@
 export const styles = {
+  cardOrgUnitTree: {
+    margin: 16,
+    width: 380,
+    minHeight: 340,
+    maxHeight: 340,
+    float: 'left',
+    transition: 'all 175ms ease-out',
+    overflowY: 'scroll',
+  },
   card: {
     margin: 16,
     width: 380,
@@ -56,6 +65,13 @@ export const styles = {
     margin: '16px -16px',
     color: '#004BA0',
     borderBottom: '1px solid #eeeeee',
+  },  
+  customLabel: {
+    fontStyle: 'italic',
+  },
+  customLabelSelected: {
+    color: 'blue',
+    weight: 900,
   },
   colors: {
     color1: {

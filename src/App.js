@@ -2,8 +2,8 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles';
 import { App as D2UIApp, mui3theme as dhis2theme } from '@dhis2/d2-ui-core';
-import HeaderBar from './components/dhis2/header-bar';
-import OrgUnitTree from './components/dhis2/org-unit-tree';
+import HeaderBar from './components/dhis2/HeaderBar';
+import OrgUnitTree from './components/dhis2/OrgUnitTreeComponent';
 
 class App extends Component {
     constructor(props) {

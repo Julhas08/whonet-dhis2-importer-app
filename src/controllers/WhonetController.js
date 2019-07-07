@@ -25,8 +25,9 @@ import {
     getAttributes,
     isDuplicate, 
     createTrackedEntity,
-    updateTrackedEntity,
-    checkOrgUnitInProgram
+    checkOrgUnitInProgram,
+    getOrgUnitDetail,
+    generateAmrId,
 } from '../components/api/API';
 
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
@@ -58,6 +59,7 @@ class WHONETFileReader extends React.Component {
             teiResponseString: "",
             mappingCsvData: [],
             duplicateStatus: false,
+            trackedEntityInstance: "",
         };
         this.uploadCSVFile = this.uploadCSVFile.bind(this);
             
@@ -87,16 +89,23 @@ class WHONETFileReader extends React.Component {
         } 
 
         let self = this;
+
+
         getPrograms().then((response) => {
-          self.setState({
-            dataElements : response.data.programs[0].programStages[0].programStageDataElements       
-          }); 
+          if(typeof response!== 'undefined'){
+              self.setState({
+                dataElements : response.data.programs[0].programStages[0].programStageDataElements       
+              }); 
+          }  
+          
         });
 
-        getAttributes().then((response) => {
+        getAttributes().then((response) => {    
+        if(typeof response!== 'undefined'){        
           self.setState({
             attributes   : response.data.trackedEntityAttributes
           });
+        }  
         });
          
     }
@@ -107,26 +116,29 @@ class WHONETFileReader extends React.Component {
         * Accept only .csv file format
         * Update setter 
         */ 
-        let filename     = event.target.files[0].name;
-        let splittedName = filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
-        if (splittedName !== 'csv') {
-            swal("Sorry! Please upload correct file format! Accepted file fortmat is CSV. Your selected file name: "+event.target.files[0].name + " Last Modified: "+ event.target.files[0].lastModified + " Size: "+ event.target.files[0].size + " File type: "+ event.target.files[0].type, {
-                icon: "warning",
-            });
-        }
-        this.setState({
-          csvfile: event.target.files[0],
-          fileFormatValue: splittedName
-        });
-        /**
-        * @{generateCsvMappingTable} returns the parsed records of selected csv file
-        */
-        Papa.parse(event.target.files[0], {
-          complete: this.generateCsvMappingTable,
-          header  : true
-        });  
+        if(typeof event.target.files[0] !== 'undefined'){
+          let filename     = event.target.files[0].name;
+          let splittedName = filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
+          if (splittedName !== 'csv') {
+              swal("Sorry! Please upload correct file format! Accepted file fortmat is CSV. Your selected file name: "+event.target.files[0].name + " Last Modified: "+ event.target.files[0].lastModified + " Size: "+ event.target.files[0].size + " File type: "+ event.target.files[0].type, {
+                  icon: "warning",
+              });
+          }
+          this.setState({
+            csvfile: event.target.files[0],
+            fileFormatValue: splittedName
+          });
+          /**
+          * @{generateCsvMappingTable} returns the parsed records of selected csv file
+          */
+          Papa.parse(event.target.files[0], {
+            complete: this.generateCsvMappingTable,
+            header  : true
+          });  
 
-        console.log("Your selected file: ", event.target.files[0].name);
+          console.log("Your selected file: ", event.target.files[0].name);
+        }
+        
     };
     /**
     * @input the selected parsed csv file data
@@ -160,238 +172,221 @@ class WHONETFileReader extends React.Component {
     * {resultMappedElement} returns the mapped elements
     * {attributesFilterResult} returns the mapped attributes
     */
-
-    uploadCSVFile(result) {
-        let csvData          = result.data;    
-        let teiPayloadStringNew = [];
-        let teiPayloadStringDuplicate = [];
+    async uploadCSVFile(result) {
+        let csvData = result.data;    
         let elementId    = "";
         let attributeId  = "";
         let elementValue = "";
-        let duplicateCount = 0;
+        let teiPayloadString = {};
         let orgUnitId = document.getElementById('selectedOrgUnitId').value;
-        let trackedEntityJson, eventDate, trackedEntityJsonDuplicate;
-        for (var i = 0; i < csvData.length-1; i++) {
-            let teiPayloadNew = [];                
-            let eventsPayload = [];
-            let teiPayloadDuplicate = [];
+        let trackedEntityJson, eventDate;
 
-            /**
-            * {Object.entries} iterates csv data from the selected csv file
-            * @returns {resultMappedElement} matched elements code
-            **/  
-            Object.entries(csvData[i]).map(([columnName, columnValue]) => {
+        const csvLength = csvData.length
+        for(let i=0; i< csvLength-1; i++) {
 
-            let resultMappedElement = this.state.dataElements.filter(function(element) {                
-                return element.dataElement.code === columnName
-                              
-            }); 
-            
-            
-            /** 
-             * @return {matchResult} the column value which is date or not, if date then formate it as `yyyy-mm-dd`
-             * config.dateColumn will return the 'Date' column name from config file. Formate date column as yyyy-mm-dd for `eventDate` 
-            */
-            if(resultMappedElement.length >= 1){
-                let matchResult = columnValue.match(/\//g);
-                if(matchResult !== null && matchResult.length === 2){
+          await ( async (currentCsvData, duplicateStatus, currentIndex) => {
+            let eventsPayload = {};
+            let teiPayload = {};
+            const csvObj = Object.entries(currentCsvData);
+            let len = csvObj.length;
+            for( let j=0; j < len-1; j++  ) {
+
+              duplicateStatus = await ( async ([columnName, columnValue], duplicate, index ) => {
+                let resultMappedElement = this.state.dataElements.filter((element) => {                
+                  return element.dataElement.code === columnName;  
+                }); 
+
+                if(resultMappedElement.length >= 1){
+                  let matchResult = columnValue.match(/\//g);
+                  if(matchResult !== null && matchResult.length === 2){
                     elementValue = formatDate(columnValue);
-                } else {
+                  } else {
                     elementValue = columnValue.replace(/[=><_]/gi, '');
+                  } 
+                  elementId = resultMappedElement[0].dataElement.id;
+                  eventsPayload[index] = {
+                    "dataElement": elementId, 
+                    "value": elementValue
+                  };   
+                }
+
+                if(columnName === config.dateColumn){
+                  eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
                 } 
-                elementId    = resultMappedElement[0].dataElement.id;
-                eventsPayload.push({"dataElement": elementId, "value": elementValue});   
+
+                let attributesFilterResult = this.state.attributes.filter(function(attribute) {
+                  return attribute.code === columnName;
+                });
+
+                if(attributesFilterResult.length >= 1){
+                  let attributeValue;
+                  attributeId = attributesFilterResult[0].id;
+                  let matchResult = columnValue.match(/\//g);
+
+                  if (matchResult !== null && matchResult.length === 2){
+                    attributeValue = formatDate(columnValue);
+                  } 
+
+                  if(columnName === config.patientIdColumn ){
+                    attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
+                  } else {
+                    attributeValue = columnValue.replace(/[=><_]/gi, '');
+                  }
+
+                  teiPayload[index] = {
+                    "attribute": attributeId, 
+                    "value": attributeValue
+                  };
+
+                  if(columnName === config.patientIdColumn ) {
+                    const result= await isDuplicate( hash(columnValue.replace(/[=><_]/gi, '')), orgUnitId, attributeId);
+                    duplicate[index]  = result;
+                      if (typeof result !=='undefined') {
+                        this.setState({ 
+                          duplicateStatus: result.result,
+                          trackedEntityInstance: result.teiId, 
+                        }); 
+                      } else {
+                        this.setState({ 
+                          duplicateStatus: false,
+                          trackedEntityInstance: null, 
+                        }); 
+                      }
+                  }
+                  // console.log("duplicateStatus-outer-if: ", this.state.duplicateStatus);
+                      
+                }  
+                return duplicate;
+              } ) (csvObj[j], {}, j);
             }
 
-            if(columnName === config.dateColumn){
-                eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
+            /**
+            * Generates AMR Id consisting of OU code and a random integer.
+            * @eventsPayloadUpdated returns updated json payload with dynamically generated amrid
+            */  
+            let orgUnitCode, amrId; 
+            const getOrgUnitCode =  await getOrgUnitDetail(orgUnitId);
+            if(typeof getOrgUnitCode.data !== 'undefined') {
+              orgUnitCode = getOrgUnitCode.data.code;
+            } else {
+              orgUnitCode = "";
+            }
+            const getAmrId = await generateAmrId(orgUnitId, orgUnitCode);
+            let amrIdPayload = [{
+              "dataElement": config.amrIdDataElement, 
+              "value": getAmrId
+            }];
+            let eventsPayloadUpdated = Object.assign(eventsPayload, amrIdPayload);
+
+
+            /**
+            * Generates AMR Id consisting of OU code and a random integer.
+            * @{Object.keys(teiPayload)} checkes the json payload length
+            * @{teiPayloadString} returns json payload with non-duplicate data to create new entity
+            */            
+
+            if( Object.keys(teiPayload).length || Object.keys(eventsPayloadUpdated).length || !this.state.duplicateStatus){
+                
+                teiPayloadString[currentIndex] = {
+                  "trackedEntityType": config.trackedEntityType,
+                  "orgUnit": orgUnitId,
+                  "attributes": Object.values(teiPayload),
+                  "enrollments":[{
+                    "orgUnit":orgUnitId,
+                    "program":config.programId,
+                    "enrollmentDate": eventDate,
+                    "incidentDate": eventDate,
+                    "events":[{
+                      "program":config.programId,
+                      "orgUnit":orgUnitId,
+                      "eventDate": eventDate,
+                      "status":"ACTIVE",
+                      "programStage":config.programStage,
+                      "dataValues": Object.values(eventsPayloadUpdated)
+                    }]
+                  }]
+                };
             } 
             /**
-            * {attributesFilterResult} matched columns with csv file
-            * {matchResult} finds whether the input value is date or not. If it is date then convert it as `yyyy-mm-dd`
-            * {attributeValue} returns the value with has if it is patient-id or registration number
-            * {attributeId} returns the tei atrribute id
-            * {teiPayloadNew} contains the level-1 json payload
-            * {isDuplicate} check the existing record
-            * @returns {null} end iteration
-            */   
-
-            let attributesFilterResult = this.state.attributes.filter(function(attribute) {
-                return attribute.code === columnName;                             
-            });
-
-            if(attributesFilterResult.length >= 1){
-                let attributeValue;
-                let duplicateData = "";
-                let matchResult = columnValue.match(/\//g);
-                
-                if (matchResult !== null && matchResult.length === 2){
-                    attributeValue = formatDate(columnValue);
-                } 
-                if(columnName === config.patientIdColumn ){
-                    console.log("attributeValue: ", attributeValue);
-                    isDuplicate(hash(columnValue.replace(/[=><_]/gi, '')), orgUnitId).then(duplicateResult => {
-
-                        /*if(typeof attributes !== 'undefined'){
-                          if(attributes.length > 0){
-                            duplicateData = "Duplicate Attribute ID: "+attributes[0].attribute + " & value: " + attributes[0].value;
-                            console.warn("Found duplicate! See results: "+ duplicateData)
-                            duplicateCount++;
-                          }  
-                        } else {
-                            attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
-                        }*/
-                        if(duplicateResult){
-                            this.setState({ duplicateStatus: true });
-                        }
-                    });
-                    attributeValue = hash(columnValue.replace(/[=><_]/gi, ''));
-                } else {
-                    attributeValue = columnValue.replace(/[=><_]/gi, '');
-                } 
-                attributeId = attributesFilterResult[0].id;
-                if(this.state.duplicateStatus){
-                    teiPayloadDuplicate.push({"attribute": attributeId, "value": attributeValue});
-                    console.log("teiPayloadDuplicate: ", teiPayloadDuplicate);
-                } else {
-                    teiPayloadNew.push({"attribute": attributeId, "value": attributeValue});
-                    console.log("teiPayloadNew: ", teiPayloadNew);
-                }
-                
-            }  
-
-            return null;
-            }); // End of csv iterations 
-          
-            /**
-            * To make tracked entity JSON payload
-            * trackedEntityInstance, programId, programStage are initializing from Config component
-            * @returns {String} teiPayloadString-json payload
-            */ 
-            if( teiPayloadNew.length !== 0 && eventsPayload.length !==0 ){
-                teiPayloadStringNew.push({"trackedEntityType": config.trackedEntityType,"orgUnit": orgUnitId,"attributes": teiPayloadNew,"enrollments":[{"orgUnit":orgUnitId,"program":config.programId,"enrollmentDate": eventDate,"incidentDate": eventDate,"events":[{"program":config.programId,"orgUnit":orgUnitId,"eventDate": eventDate,"status":"ACTIVE","programStage":config.programStage,"dataValues":eventsPayload}]}]});
-            } else if( teiPayloadDuplicate.length !== 0 && eventsPayload.length !==0 ){
-                teiPayloadStringDuplicate.push({"trackedEntityType": config.trackedEntityType,"orgUnit": orgUnitId,"attributes": teiPayloadDuplicate,"enrollments":[{"orgUnit":orgUnitId,"program":config.programId,"enrollmentDate": eventDate,"incidentDate": eventDate,"events":[{"program":config.programId,"orgUnit":orgUnitId,"eventDate": eventDate,"status":"ACTIVE","programStage":config.programStage,"dataValues":eventsPayload}]}]});
-            } else {
-                swal("Sorry! The prepared JSON payload is empty. Please check your CSV file data. TeiPayload: "+ teiPayloadNew, {
-                    icon: "warning",
-                });
+            * @{duplicateStatus} checkes the existing enrollment 
+            * @{teiPayloadString} returns json payload with duplicate data to update exinsting enrollment
+            */
+            if (this.state.duplicateStatus) {
+              teiPayloadString[currentIndex] = {
+                  "trackedEntityInstance": this.state.trackedEntityInstance,
+                  "trackedEntityType": config.trackedEntityType,
+                  "orgUnit": orgUnitId,
+                  "attributes": Object.values(teiPayload),
+                  "enrollments":[{
+                    "orgUnit":orgUnitId,
+                    "program":config.programId,
+                    "enrollmentDate": eventDate,
+                    "incidentDate": eventDate,
+                    "events":[{
+                      "program":config.programId,
+                      "orgUnit":orgUnitId,
+                      "eventDate": eventDate,
+                      "status":"ACTIVE",
+                      "programStage":config.programStage,
+                      "dataValues": Object.values(eventsPayloadUpdated)
+                    }]
+                  }]
+                };
             }
             
-            
+          return duplicateStatus;
+          } ) ( csvData[i], {}, i );
         }
 
         /**
-        * {trackedEntityJson} returns final json payload
-        * Check whether the trackedEntityInstances is not undefined or empty json
-        * {trackedEntityJson} sends to `API` component 
-        * Sending tracked entity json payload
-        * Check response status for tei is `OK`      
+        * @{teiPayloadString}-contains the new and duplicate payload
+        * @{trackedEntityJson} - returns the final json payload 
         */
-        if (this.state.duplicateStatus)
-            trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadStringNew)+'}';
-        else 
-            trackedEntityJsonDuplicate = '{"trackedEntityInstances": '+JSON.stringify(teiPayloadStringDuplicate)+'}';
-        console.log("Final trackedEntityJson payload: ", trackedEntityJson);
-        if (teiPayloadStringNew.length > 0 && !this.state.duplicateStatus) {
-            createTrackedEntity(trackedEntityJson).then(response => {
-                this.setState({ 
-                    teiResponse: response.data,
-                    teiResponseString: JSON.stringify(response.data),
-                });
-                if(response.data.httpStatus === "OK" ){
-                    swal("Successfully uploaded WHONET data!", {
-                        icon: "success",
-                    });
-                    this.setState({
-                        loading: false
-                    });
-                } else {
-                    swal("Sorry! Unable to import WHONET file!", {
-                        icon: "warning",
-                    });
-                    this.setState({
-                        loading: false
-                    });
-                } 
-            }).catch(error => {
-
-                if (error.response) {
-                    /**
-                     * The request was made and the server responded with a
-                     * status code that falls out of the range of 2xx
-                     */
-                    swal("Something went wrong! "+ error.response.data.message, {
-                        icon: "warning",
-                    });
-                    this.setState({ 
-                        teiResponse: error.response.data,
-                        teiResponseString: JSON.stringify(error.response.data),
-                        loading: false
-                    });
-                } else if (error.request) {
-                    /*
-                     * The request was made but no response was received, `error.request`
-                     * is an instance of XMLHttpRequest in the browser and an instance
-                     * of http.ClientRequest in Node.js
-                     */
-                    console.log(error.request);
-                } else {
-                    // Something happened in setting up the request and triggered an Error
-                    console.log('Error', error.message);
-                }
-                console.log(error.config);
+        if((typeof teiPayloadString !== 'undefined' || teiPayloadString !== null)){
+          trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(Object.entries(teiPayloadString).map(payload => payload[1]) )+'}';
+          // console.log("Final teiPayloadString payload: ", trackedEntityJson);
+        } 
+  
+        if ( typeof teiPayloadString !== 'undefined') {
+          try {
+            let responseData = false;            
+            responseData =  await createTrackedEntity(trackedEntityJson);
+            this.setState({
+              teiResponse: responseData.data,
+              teiResponseString: JSON.stringify(responseData.data)
             });
+                       
+            if(typeof responseData.data !== 'undefined'){
+              if(responseData.data.httpStatus === "OK" ){
+                swal("Successfully uploaded WHONET data!", {
+                    icon: "success",
+                });
+                this.setState({
+                    loading: false
+                });
+              } else {
+                swal("Sorry! Unable to import WHONET file!", {
+                    icon: "warning",
+                });
+                this.setState({
+                    loading: false
+                });
+              }
+            } else {
+                swal("Sorry! Response data is undefined!", {
+                    icon: "warning",
+                });
+                this.setState({
+                    loading: false
+                });
+            }           
             
-        } else if(this.state.duplicateStatus) {
-            updateTrackedEntity(trackedEntityJsonDuplicate).then(response => {
-                this.setState({ 
-                    teiResponse: response.data,
-                    teiResponseString: JSON.stringify(response.data),
-                });
-                if(response.data.httpStatus === "OK" ){
-                    swal("Successfully updated WHONET data!", {
-                        icon: "success",
-                    });
-                    this.setState({
-                        loading: false
-                    });
-                } else {
-                    swal("Sorry! Unable to update WHONET file!", {
-                        icon: "warning",
-                    });
-                    this.setState({
-                        loading: false
-                    });
-                } 
-            }).catch(error => {
+          } catch( err ) {
+            if(typeof err !== 'undefined'){
+              console.log(err)
+            }
+          }
 
-                if (error.response) {
-                    /**
-                     * The request was made and the server responded with a
-                     * status code that falls out of the range of 2xx
-                     */
-                    swal("Something went wrong! "+ error.response.data.message, {
-                        icon: "warning",
-                    });
-                    this.setState({ 
-                        teiResponse: error.response.data,
-                        teiResponseString: JSON.stringify(error.response.data),
-                        loading: false
-                    });
-                } else if (error.request) {
-                    /*
-                     * The request was made but no response was received, `error.request`
-                     * is an instance of XMLHttpRequest in the browser and an instance
-                     * of http.ClientRequest in Node.js
-                     */
-                    console.log(error.request);
-                } else {
-                    // Something happened in setting up the request and triggered an Error
-                    console.log('Error', error.message);
-                }
-                console.log(error.config);
-            });
         } else {
             swal("Sorry! Your prepared JSON payload is empty. Please check your CSV file data.", {
                 icon: "warning",
@@ -399,8 +394,7 @@ class WHONETFileReader extends React.Component {
             this.setState({
                 loading: false
             });
-        }       
-        
+        }  
         
     }
 
@@ -475,7 +469,7 @@ class WHONETFileReader extends React.Component {
     */
     handleSettingModal = () => {
         this.setState({ 
-            isSettingModalOpen: !this.state.isSettingModalOpen,
+          isSettingModalOpen: !this.state.isSettingModalOpen,
         });
     };
 
@@ -484,7 +478,7 @@ class WHONETFileReader extends React.Component {
     */
     handleHelpModal = () => {
         this.setState({ 
-            isHelpModalOpen:  !this.state.isHelpModalOpen,
+          isHelpModalOpen:  !this.state.isHelpModalOpen,
         });
     };
 
@@ -505,15 +499,15 @@ class WHONETFileReader extends React.Component {
         } 
         
         if( Object.keys(this.state.mappingCsvData).length > 0 || Object.entries(this.state.mappingCsvData).length > 0 ){
-            logger = <CsvMappingColumns csvData = {this.state.mappingCsvData} dataElements={this.state.dataElements} attributes={this.state.attributes}/>;
+          logger = <CsvMappingColumns csvData = {this.state.mappingCsvData} dataElements={this.state.dataElements} attributes={this.state.attributes}/>;
         }
         if( Object.keys(this.state.teiResponse).length > 0 || Object.entries(this.state.teiResponse).length > 0 ){
-  
-            teiResponse = <ImportResults teiResponse={this.state.teiResponse} />
-            logger = <LoggerComponent teiResponse={this.state.teiResponse}  teiResponseString={this.state.teiResponseString}/>
+          teiResponse = <ImportResults teiResponse={this.state.teiResponse} />
+          logger = <LoggerComponent teiResponse={this.state.teiResponse}  teiResponseString={this.state.teiResponseString}/>
         }
+
         if(this.state.isHelpModalOpen){
-            modal = <HelpModal isModalOpen={this.state.isHelpModalOpen}  handleModal={this.handleHelpModal} />
+          modal = <HelpModal isModalOpen={this.state.isHelpModalOpen}  handleModal={this.handleHelpModal} />
         }
         let helpModal = <Fab color="primary" aria-label="Edit" onClick={this.handleHelpModal} style={styleProps.styles.helpModalPosition}>
                        <ViewSupportIcon />
@@ -522,52 +516,52 @@ class WHONETFileReader extends React.Component {
     return (
       <div>
           <Card style={styleProps.styles.card}>
+            <CardText style={styleProps.styles.cardText}>
+                
+              <h3 style={styleProps.styles.cardHeader}>IMPORT WHONET CSV FILE! 
+              { userAuthority }
+              </h3> 
+
+              <InputField
+                label="Organisation Unit"
+                value={this.props.orgUnit}
+                disabled
+                onChange={(value) => this.onChangeValue("orgUnitField", value)}
+                name = "selectedOrgUnit"
+              /><input
+                type="hidden" id="selectedOrgUnitId" value ={this.props.orgUnitId}
+                />
+              <div style={styleProps.styles.buttonPosition}></div>
+
+              <input
+                type="file"
+                ref={input => {
+                  this.filesInput = input;
+                }}
+                name="file"
+                placeholder={null}
+                onChange={this.handleChangeFileUpload}                  
+                accept=".csv"
+              />
+              <div style={styleProps.styles.buttonPosition}></div>
+
+              <Button type="submit" raised color='primary' onClick={this.fileUploadPreAlert}>IMPORT</Button>
+
+              <br /><br />                  
+
+            </CardText>
+            <CardText style={styleProps.styles.cardText}>
+              {spinner} 
+            </CardText>
+            {modal}
+          </Card>
+          <Card style={styleProps.styles.card}>
               <CardText style={styleProps.styles.cardText}>
-                  
-                  <h3 style={styleProps.styles.cardHeader}>IMPORT WHONET CSV FILE! 
-                  { userAuthority }
-                  </h3> 
-
-                  <InputField
-                    label="Organisation Unit"
-                    value={this.props.orgUnit}
-                    disabled
-                    onChange={(value) => this.onChangeValue("orgUnitField", value)}
-                    name = "selectedOrgUnit"
-                  /><input
-                    type="hidden" id="selectedOrgUnitId" value ={this.props.orgUnitId}
-                    />
-                  <div style={styleProps.styles.buttonPosition}></div>
-
-                  <input
-                    type="file"
-                    ref={input => {
-                      this.filesInput = input;
-                    }}
-                    name="file"
-                    placeholder={null}
-                    onChange={this.handleChangeFileUpload}                  
-                    accept=".csv"
-                  />
-                  <div style={styleProps.styles.buttonPosition}></div>
-
-                  <Button type="submit" raised color='primary' onClick={this.fileUploadPreAlert}>IMPORT</Button>
-
-                  <br /><br />                  
-
+              <h3 style={styleProps.styles.cardHeader}>IMPORT RESULT {helpModal}</h3>
+              {teiResponse}
               </CardText>
-              <CardText style={styleProps.styles.cardText}>
-                {spinner} 
-              </CardText>
-              {modal}
-            </Card>
-            <Card style={styleProps.styles.card}>
-                <CardText style={styleProps.styles.cardText}>
-                <h3 style={styleProps.styles.cardHeader}>IMPORT RESULT {helpModal}</h3>
-                {teiResponse}
-                </CardText>
-            </Card>
-            {logger}
+          </Card>
+          {logger}
       </div>
 
     );

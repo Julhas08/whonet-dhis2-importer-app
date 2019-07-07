@@ -24,7 +24,7 @@ export const checkOrgUnitInProgram = async (orgUnitId) => {
 				
 	})
 	.catch(function (error) {
-		console.log(error.response.data);
+		console.log(error.response);
 	});   
 };
 /**
@@ -32,60 +32,49 @@ export const checkOrgUnitInProgram = async (orgUnitId) => {
 * @param {String} input - hashed patient id
 * @returns {Object} duplicate values
 */
-export const isDuplicate = async (input, orgUnitId) => {
+export const isDuplicate = (input, orgUnitId, attributeId) => {
 
 	let duplicateValue=[];
 	let matchResult;
-    return await get(request('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId, {
+    if(typeof attributeId !== 'undefined' && typeof input !== 'undefined'){
+
+        return get(request('api/trackedEntityInstances.json?program='+config.programId+'&ou='+orgUnitId, {
             order: 'created:asc',
-            fields: 'attributes[attribute,value]',
-            //filters: `${duplicateValue}:eq:${input}`,
-            //options: [`trackedEntityInstance=${entity}`],
+            fields: 'trackedEntityInstance,attributes[attribute,value]',
+            filters: `${attributeId}:eq:${input}`,
         }))
-    	.then(function (response) {
-    		
-    		if(response.data.trackedEntityInstances.length !== 0){
-	    		if(typeof response.data.trackedEntityInstances !== 'undefined'){
-
-	    			/*duplicateValue = response.data.trackedEntityInstances[0].attributes;
-	    			console.log("duplicateValue: ", duplicateValue);
-	    			
-
-					matchResult = duplicateValue.filter(function(data){
-						return data.value === input;
-					});
-					console.log("matchResult: ", matchResult);
-					return matchResult;*/
-
-					return true;
-	    		}
-    		}
-			
-		})
-		.catch(function (error) {
-			// handle error
-			console.log(error.response.data);
-		});
-   
+        .then(function (response) {
+            if(typeof response.data.trackedEntityInstances !== 'undefined'){
+                duplicateValue = response.data.trackedEntityInstances[0].attributes;     
+                let teiId = response.data.trackedEntityInstances[0].trackedEntityInstance;
+                matchResult = duplicateValue.filter(function(data){
+                    return data.value === input;
+                });
+                return {"teiId": teiId, "result": matchResult.length};
+            }           
+        })
+        .catch(function (error) {
+          if(typeof error.response !== 'undefined'){
+            console.log(error.response);
+          }
+        });
+    }  
+};
+export const getMe = async () => {
+    // return await get('api/me.json?fields=id,name,organisationUnits[:id,name,level,children[id,name,level,children[id,name,level,children[id,name,level]]]]&order:name:asc')
+    return await get('api/me.json?fields=organisationUnits[id,name,level,parent,children::isNotEmpty]');
 };
 
 export const createTrackedEntity = async (trackedEntityJson) => {
-    return await axios(config.baseUrl+'api/trackedEntityInstances', {
+    return axios(config.baseUrl+'api/trackedEntityInstances', {
         method: 'POST',
         headers: config.fetchOptions.headers,
         data: trackedEntityJson,
     }) 
 };
 
-export const updateTrackedEntity = async (trackedEntityJson) => {
-    return await axios(config.baseUrl+'api/trackedEntityInstances', {
-        method: 'PUT',
-        headers: config.fetchOptions.headers,
-        data: trackedEntityJson,
-    }) 
-};
-
 export const getPrograms = async () => {
+	
     return await get('api/programs.json?filter=id:eq:'+config.programId+'&fields=id,name,programStages[id,name,programStageDataElements[dataElement[id,name,code,attributeValues[value,attribute[id,name]]]]]&paging=false')
     	.then(function (response) {    		
 			return response;
@@ -165,3 +154,37 @@ export const metaDataUpdate = async (api, jsonPayload) => {
     })
    
 };
+
+/**
+* Get organisation unit detail
+* @returns {string} org unit detail
+*/
+export const getOrgUnitDetail = async (orgUnitId) => {
+    return await get('api/organisationUnits/'+orgUnitId+'.json?fields=id,name,shortName,level,code');
+   
+};
+
+/**
+ * Generates AMR Id consisting of OU code and a random integer.
+ * @param {string} orgUnitId - Organisation unit ID.
+ * @returns {string} AMR Id.
+ */
+export const generateAmrId = async (orgUnitId, orgUnitCode, amrDataElement) => {
+    const newId = () =>
+    orgUnitCode + (Math.floor(Math.random() * 90000) + 10000)
+    let amrId = newId();
+    return get(
+      request('api/events.json?', {
+        fields: 'event',
+        filters: `${config.amrIdDataElement}:eq:${amrId}`,
+        options: [`orgUnit=${orgUnitId}`],
+      })
+    ).then( response =>{
+      if (response.data.events.length) {
+        amrId = response.data.events;
+        return amrId;
+      } else {
+        return amrId;
+      }
+    });
+}

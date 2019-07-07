@@ -11,7 +11,7 @@ import reducer from './store/reducer';
 const store = createStore(reducer);
 let baseUrl = process.env.REACT_APP_DHIS2_BASE_URL;
 if (!baseUrl) {
-    console.warn('Set the environment variable `REACT_APP_DHIS2_BASE_URL` to your DHIS2 instance to override localhost:8080!');
+    //console.warn('Set the environment variable `REACT_APP_DHIS2_BASE_URL` to your DHIS2 instance to override localhost:8080!');
     baseUrl = config.baseUrl;
 }
 
