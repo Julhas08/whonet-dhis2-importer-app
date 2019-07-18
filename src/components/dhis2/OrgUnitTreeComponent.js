@@ -6,6 +6,7 @@ import CardText from 'material-ui/Card/CardText';
 import SingleSelection from './org-unit-tree/OrgUnitSingleSelection';
 import WhonetController from '../../controllers/WhonetController';
 import CustomOrgUnitTreeView from './custom-orgunit-tree/CustomOrgUnitTreeView';
+import CustomTree from './custom-orgunit-tree/CustomTree';
 import 'regenerator-runtime/runtime';
 import { 
     getMe,
@@ -30,6 +31,8 @@ export default class OrgUnitTreeComponent extends React.Component {
       orgUnitLevel: [],
       userAuthority: "", 
       levelOne: false,
+      customTree: false,
+      tree: "",
 		};	
 		/**
 		* @{symbolValueCurrentUser}-returns the current user symbol values 
@@ -94,53 +97,60 @@ export default class OrgUnitTreeComponent extends React.Component {
 
 		getMe().then( me =>{
 			this.setState({currentUserOrgUnits: me.data.organisationUnits});
+			//console.log("me.data.organisationUnits[i]: ", JSON.stringify(me.data.organisationUnits));
+			let id1, name1, level1=[], id2, name2, level2=[], id3, name3, level3=[], tree=[];
+			var rootTreeJson = [];
+			var rootTreeJson1 = [];
 			for (var i = 0; i < me.data.organisationUnits.length; i++) {
 				if(me.data.organisationUnits[i].level === 1){
+
 					this.setState({levelOne: true});
-					let level1;
-					if(typeof me.data.organisationUnits[i].children !== 'undefined' || me.data.organisationUnits[i].children.length > 0){
-						level1 = {
-							"id": me.data.organisationUnits[i].id,
-							"name": me.data.organisationUnits[i].name,
-							"children": me.data.organisationUnits[i].children
-						}
-					} else {
-						level1 = {
-							"id": me.data.organisationUnits[i].id,
-							"name": me.data.organisationUnits[i].name,
-						}
-					}
-					
-					orgUnitLevel1.push(level1);
+					level1.push({
+						"id": me.data.organisationUnits[i].id,
+						"name": me.data.organisationUnits[i].name,
+						"children": me.data.organisationUnits[i].children,
+						"parent": me.data.organisationUnits[i].parent
+					});
 
-				}  if(me.data.organisationUnits[i].level === 2){
-					let level2;
-					if(typeof me.data.organisationUnits[i].children !== 'undefined' || me.data.organisationUnits[i].children.length > 0){
-						level2 = {
-							"id": me.data.organisationUnits[i].id,
-							"name": me.data.organisationUnits[i].name,
-							"children": me.data.organisationUnits[i].children
-						}
-					} else {
-						level2 = {
-							"id": me.data.organisationUnits[i].id,
-							"name": me.data.organisationUnits[i].name,
-						}
-					}
-					
-					orgUnitLevel2.push(level2);
+				}  
+				if(me.data.organisationUnits[i].level === 2){
+					level2.push({
+						"id": me.data.organisationUnits[i].id,
+						"name": me.data.organisationUnits[i].name,
+						"children": me.data.organisationUnits[i].children,
+						"parent": me.data.organisationUnits[i].parent
+					});
+				}
 
-				}  if(me.data.organisationUnits[i].level === 3){
+				if(me.data.organisationUnits[i].level === 3){
 					let children3 = {
-									"id": me.data.organisationUnits[i].id,
-									"name": me.data.organisationUnits[i].name,
-								};
+						"id": me.data.organisationUnits[i].id,
+						"name": me.data.organisationUnits[i].name,
+					};
+					level3.push({
+						"id": me.data.organisationUnits[i].id,
+						"name": me.data.organisationUnits[i].name,
+						"parent": me.data.organisationUnits[i].parent
+					});
 					orgUnitLevel3.push(children3);
 				}
+
 			}
 			if(orgUnitLevel3 !== '' || typeof orgUnitLevel3 !== 'undefined') {
-				this.setState({ orgUnitLevel: orgUnitLevel3 });
-			}			
+				this.setState({ orgUnitLevel: orgUnitLevel3 });				
+			}	
+			tree.push({
+			  level1: level1,
+			  children: [ {
+			    level2: level2,				  
+				  children: [ {
+				   level3: level3
+					}]
+				}]
+			});	
+			//console.log(JSON.stringify(tree));
+			this.setState({ tree: tree });
+
 		});
 	}
 
@@ -215,6 +225,7 @@ export default class OrgUnitTreeComponent extends React.Component {
       }
       this.setState({ customTreeDataFromChild: dataFromChild });
   }
+
 	render () {
 		const { root, roots, preRoot } = this.state;
 		if (!root || !roots || !preRoot) {
@@ -224,14 +235,58 @@ export default class OrgUnitTreeComponent extends React.Component {
 		* @{d2OrgUnit}-returns the d2-ui based org unit tree when a specific user have org unit root level or level-1 access
 		* @{customOrgUnit}-display only the assigned org units which has developed as custom
 		*/
-		let customOrgUnit, d2OrgUnit;
+		let customOrgUnit, d2OrgUnit, customTree;
 		if(this.state.userAuthority === 'ALL' && this.state.levelOne){
 			d2OrgUnit = <SingleSelection root={root} callbackFromParent={this.d2OrgUnitCallback} />;
 		} else {
-			if(typeof this.state.orgUnitLevel !== 'undefined' || this.state.orgUnitLevel !== ''){
+			if(typeof this.state.orgUnitLevel !== 'undefined' || this.state.orgUnitLevel !== ''){				
 				customOrgUnit = <CustomOrgUnitTreeView orgUnits = {this.state.orgUnitLevel} callbackFromParent={this.customOrgUnitCallback}/>
+				
 			}
-		}			
+		}
+		if(this.state.customTree){
+			let tree = {
+			  id: "id1",
+			  name: "India",
+			  level: 1,
+			  children: [ {
+			    id: "id2",
+			  	name: "Andaman and Nicobar",
+				  level: 2,
+				  parent: [{id: "parentId"}],
+				  children: [ {
+				    id: "id3",
+			  		name: "Chittoor",
+					  level: 3,
+					  parent: [{id: "parentId"}]
+					},{
+				    id: "id3",
+			  		name: "East Godavari",
+					  level: 3,
+					  parent: [{id: "parentId"}]
+					}]
+				},{
+			    id: "id2",
+			  	name: "Andhra Pradesh",
+				  level: 2,
+				  parent: [{id: "parentId"}],
+				  children: [ {
+				    id: "id3",
+			  		name: "Nicobar",
+					  level: 3,
+					  parent: [{id: "parentId"}]
+					},{
+				    id: "id3",
+			  		name: "Anantapur",
+					  level: 3,
+					  parent: [{id: "parentId"}]
+					}]
+				}]
+			}	
+			customTree = <CustomTree node={tree}/>
+		}
+		// console.log("this.state.orgUnitLevel: ", this.state.orgUnitLevel);		
+
 		return (
       <div>
           <Card style={styleProps.styles.cardOrgUnitTree}>
@@ -239,6 +294,9 @@ export default class OrgUnitTreeComponent extends React.Component {
                   <h3 style={styleProps.styles.cardHeader}>Select Organization Unit</h3>
                   {d2OrgUnit}
               	{customOrgUnit}	
+
+              	{customTree}
+
               </CardText>
           </Card>
           <WhonetController d2={this.state.d2} orgUnitId={this.state.userOrgUnitId} orgUnit={this.state.userOrgUnitName}/>

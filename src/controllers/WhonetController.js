@@ -12,6 +12,7 @@ import HelpModal from '../components/settings/HelpModal';
 import SettingsIcon from '@material-ui/icons/SettingsApplicationsRounded';
 import Fab from '@material-ui/core/Fab';
 import ViewSupportIcon from '@material-ui/icons/HelpOutlineRounded';
+import AddCircleRounded from '@material-ui/icons/AddCircleRounded';
 import * as config  from '../config/Config';
 import * as styleProps from '../components/ui/Styles';
 import * as actionTypes from '../constants/actions.js';
@@ -28,6 +29,7 @@ import {
     checkOrgUnitInProgram,
     getOrgUnitDetail,
     generateAmrId,
+    getDataStoreNameSpace,
 } from '../components/api/API';
 
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
@@ -48,6 +50,7 @@ class WHONETFileReader extends React.Component {
             fileFormatValue: '',
             isSettingModalOpen: false,
             isHelpModalOpen: false,
+            isMultipleLabSettingModalOpen: false,
             userRoles  : "",
             userAuthority : "",             
             dataElements: [],
@@ -60,11 +63,12 @@ class WHONETFileReader extends React.Component {
             mappingCsvData: [],
             duplicateStatus: false,
             trackedEntityInstance: "",
+            dataStoreNamespace: [],
         };
         this.uploadCSVFile = this.uploadCSVFile.bind(this);
             
     }
-    componentWillMount(){
+    async componentWillMount(){
         /**
          * @param {currentUser} input
          * @returns Current user roles and organization unit 
@@ -89,9 +93,7 @@ class WHONETFileReader extends React.Component {
         } 
 
         let self = this;
-
-
-        getPrograms().then((response) => {
+        await getPrograms().then((response) => {
           if(typeof response!== 'undefined'){
               self.setState({
                 dataElements : response.data.programs[0].programStages[0].programStageDataElements       
@@ -100,14 +102,14 @@ class WHONETFileReader extends React.Component {
           
         });
 
-        getAttributes().then((response) => {    
+        await getAttributes().then((response) => {    
         if(typeof response!== 'undefined'){        
           self.setState({
             attributes   : response.data.trackedEntityAttributes
           });
         }  
-        });
-         
+        });       
+       
     }
     handleChangeFileUpload = event => {
 
@@ -180,6 +182,12 @@ class WHONETFileReader extends React.Component {
         let teiPayloadString = {};
         let orgUnitId = document.getElementById('selectedOrgUnitId').value;
         let trackedEntityJson, eventDate;
+        await getDataStoreNameSpace(orgUnitId).then((response) => {
+          this.setState({
+            dataStoreNamespace : response.data.elements      
+          }); 
+        }).catch(error => this.setState({error: true}));
+        const dataStoreNamespace = this.state.dataStoreNamespace;
 
         const csvLength = csvData.length
         for(let i=0; i< csvLength-1; i++) {
@@ -192,23 +200,46 @@ class WHONETFileReader extends React.Component {
             for( let j=0; j < len-1; j++  ) {
 
               duplicateStatus = await ( async ([columnName, columnValue], duplicate, index ) => {
-                let resultMappedElement = this.state.dataElements.filter((element) => {                
-                  return element.dataElement.code === columnName;  
-                }); 
 
-                if(resultMappedElement.length >= 1){
-                  let matchResult = columnValue.match(/\//g);
-                  if(matchResult !== null && matchResult.length === 2){
-                    elementValue = formatDate(columnValue);
-                  } else {
-                    elementValue = columnValue.replace(/[=><_]/gi, '');
-                  } 
-                  elementId = resultMappedElement[0].dataElement.id;
-                  eventsPayload[index] = {
-                    "dataElement": elementId, 
-                    "value": elementValue
-                  };   
+                if(config.settingType !== 'multiLab'){
+                  
+                  let resultMappedElement = this.state.dataElements.filter((element) => {                
+                    return element.dataElement.code === columnName;  
+                  });
+                  if(resultMappedElement.length >= 1){
+                    let matchResult = columnValue.match(/\//g);
+                    if(matchResult !== null && matchResult.length === 2){
+                      elementValue = formatDate(columnValue);
+                    } else {
+                      elementValue = columnValue.replace(/[=><_]/gi, '');
+                    } 
+                    elementId = resultMappedElement[0].dataElement.id;
+                    eventsPayload[index] = {
+                      "dataElement": elementId, 
+                      "value": elementValue
+                    };   
+                  }
+                } else {
+                  let resultMappedElement = dataStoreNamespace.filter((element) => {                
+                    return element.sourceCode === columnName;  
+                  });
+
+                  if(resultMappedElement.length >= 1){
+                    let matchResult = columnValue.match(/\//g);
+                    if(matchResult !== null && matchResult.length === 2){
+                      elementValue = formatDate(columnValue);
+                    } else {
+                      elementValue = columnValue.replace(/[=><_]/gi, '');
+                    } 
+                    elementId = resultMappedElement[0].id;
+                    eventsPayload[index] = {
+                      "dataElement": elementId, 
+                      "value": elementValue
+                    };   
+                  }
                 }
+                console.log({eventsPayload});                
+                
 
                 if(columnName === config.dateColumn){
                   eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
@@ -264,7 +295,7 @@ class WHONETFileReader extends React.Component {
             * Generates AMR Id consisting of OU code and a random integer.
             * @eventsPayloadUpdated returns updated json payload with dynamically generated amrid
             */  
-            let orgUnitCode, amrId; 
+            let orgUnitCode; 
             const getOrgUnitCode =  await getOrgUnitDetail(orgUnitId);
             if(typeof getOrgUnitCode.data !== 'undefined') {
               orgUnitCode = getOrgUnitCode.data.code;
@@ -344,17 +375,17 @@ class WHONETFileReader extends React.Component {
         */
         if((typeof teiPayloadString !== 'undefined' || teiPayloadString !== null)){
           trackedEntityJson = '{"trackedEntityInstances": '+JSON.stringify(Object.entries(teiPayloadString).map(payload => payload[1]) )+'}';
-          // console.log("Final teiPayloadString payload: ", trackedEntityJson);
+          console.log("Final teiPayloadString payload: ", trackedEntityJson);
         } 
   
         if ( typeof teiPayloadString !== 'undefined') {
           try {
             let responseData = false;            
-            responseData =  await createTrackedEntity(trackedEntityJson);
-            this.setState({
-              teiResponse: responseData.data,
-              teiResponseString: JSON.stringify(responseData.data)
-            });
+            // responseData =  await createTrackedEntity(trackedEntityJson);
+            // this.setState({
+            //   teiResponse: responseData.data,
+            //   teiResponseString: JSON.stringify(responseData.data)
+            // });
                        
             if(typeof responseData.data !== 'undefined'){
               if(responseData.data.httpStatus === "OK" ){
@@ -468,58 +499,110 @@ class WHONETFileReader extends React.Component {
     * @returns isSettingModalOpen true
     */
     handleSettingModal = () => {
-        this.setState({ 
-          isSettingModalOpen: !this.state.isSettingModalOpen,
+      this.setState({ 
+        isSettingModalOpen: !this.state.isSettingModalOpen,
+      });
+    };
+
+    /**
+    * @returns isSettingModalOpen true
+    */
+    handleMultipleLabSettingModal = () => {
+
+      if(this.props.orgUnitId.length === 0){
+        swal({
+          title: "Sorry! Please select your organisation first!",
+          icon: "warning",
         });
+      } else {
+        this.setState({ 
+          isMultipleLabSettingModalOpen: !this.state.isMultipleLabSettingModalOpen,
+        });
+      }
     };
 
     /**
     * @returns isHelpModalOpen true
     */
     handleHelpModal = () => {
-        this.setState({ 
-          isHelpModalOpen:  !this.state.isHelpModalOpen,
-        });
+      this.setState({ 
+        isHelpModalOpen:  !this.state.isHelpModalOpen,
+      });
     };
 
     render() {
         // console.log("CTR: ", this.props.ctr);
         
-        let spinner, modal, userAuthority, teiResponse, logger;
+        let spinner, modal, userAuthority, teiResponse, logger, multipleLabModal;
+        /**
+        * Linear Loader
+        */
         if(this.state.loading){
           spinner = <LinearProgress />
         } 
+        /**
+        * Default modal for Elements and Attributes settings
+        * @settingType-default for super admin & all previleage level access
+        */
         if(this.state.isSettingModalOpen){
-          modal = <MappingModal isModalOpen={this.state.isSettingModalOpen}  handleModal={this.handleSettingModal} />
-        } 
-        if(this.state.userAuthority === 'ALL'){
-          userAuthority = <Fab color='primary' aria-label="Edit" onClick={this.handleSettingModal} style={styleProps.styles.helpModalPosition}>
-            <SettingsIcon style={styleProps.styles.settingIcon} />
-          </Fab>;
+          modal = <MappingModal isModalOpen={this.state.isSettingModalOpen}  handleModal={this.handleSettingModal} settingType="default" />
         } 
         
-        if( Object.keys(this.state.mappingCsvData).length > 0 || Object.entries(this.state.mappingCsvData).length > 0 ){
-          logger = <CsvMappingColumns csvData = {this.state.mappingCsvData} dataElements={this.state.dataElements} attributes={this.state.attributes}/>;
-        }
+        /**
+        * Multi-lab setting
+        * @settingType-multipleLab for all level of users access
+        * @multipleLabModal- returns the modal for multiple lab meta attributes setting 
+        */
+        if(this.state.isMultipleLabSettingModalOpen){
+          modal = <MappingModal isModalOpen={this.state.isMultipleLabSettingModalOpen}  handleModal={this.handleMultipleLabSettingModal} settingType={config.settingType} orgUnitId={this.props.orgUnitId} orgUnitName={this.props.orgUnit}/>
+        } 
+        /**
+        * ImportResults-import result summary & logger for json response preview
+        * @returns-logger
+        */
         if( Object.keys(this.state.teiResponse).length > 0 || Object.entries(this.state.teiResponse).length > 0 ){
           teiResponse = <ImportResults teiResponse={this.state.teiResponse} />
           logger = <LoggerComponent teiResponse={this.state.teiResponse}  teiResponseString={this.state.teiResponseString}/>
         }
-
+        /**
+        * CsvMappingColumns-bottom csv file header mapping
+        * @returns-logger
+        */  
+        if( Object.keys(this.state.mappingCsvData).length > 0 || Object.entries(this.state.mappingCsvData).length > 0 ){
+          logger = <CsvMappingColumns csvData = {this.state.mappingCsvData} dataElements={this.state.dataElements} attributes={this.state.attributes}/>;
+        }
+        /**
+        * HelpModal-static data for the user guideline, how this mapping works
+        * @returns-modal
+        */
         if(this.state.isHelpModalOpen){
           modal = <HelpModal isModalOpen={this.state.isHelpModalOpen}  handleModal={this.handleHelpModal} />
         }
+        /**
+        * SettingsIcon-for default setting button
+        * AddCircleRounded-for multiple lab setting button
+        * ViewSupportIcon-for help modal
+        * @returns-modal
+        */     
+        if(this.state.userAuthority === 'ALL'){
+          userAuthority = <Fab color='primary' aria-label='Edit' onClick={this.handleSettingModal} style={styleProps.styles.helpModalPosition}>
+            <SettingsIcon style={styleProps.styles.settingIcon} />
+          </Fab>;
+        }
+        multipleLabModal = <Fab color='primary' aria-label="Edit" onClick={this.handleMultipleLabSettingModal} style={styleProps.styles.helpModalPosition}>
+            <AddCircleRounded style={styleProps.styles.settingIcon} />
+          </Fab>;       
+        
         let helpModal = <Fab color="primary" aria-label="Edit" onClick={this.handleHelpModal} style={styleProps.styles.helpModalPosition}>
                        <ViewSupportIcon />
                       </Fab>
-
     return (
       <div>
           <Card style={styleProps.styles.card}>
             <CardText style={styleProps.styles.cardText}>
                 
               <h3 style={styleProps.styles.cardHeader}>IMPORT WHONET CSV FILE! 
-              { userAuthority }
+              { multipleLabModal }{ userAuthority }
               </h3> 
 
               <InputField
