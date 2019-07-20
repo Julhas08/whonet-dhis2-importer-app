@@ -19,12 +19,12 @@ class MappingModal extends React.Component {
   render() {
     let orgUnitId = this.props.orgUnitId;
     let orgUnitName = this.props.orgUnitName;
-    let modalTitle ="";
+    let modalTitle;
     if (this.props.settingType === 'multiLab') {
-      modalTitle = "MULTIPLE LAB-SETTING";
+      modalTitle = <h3 style={styleProps.styles.cardHeaderModal}> MULTIPLE LAB-SETTING <br /> Lab Name: {orgUnitName} <br /> Lab Unique Code: {orgUnitId}<Close style={styleProps.styles.closeIcon} onClick={this.props.handleModal}/></h3>;
 
     } else {
-      modalTitle = "WHONET DHIS2 INTEGRATION APP-SETTING";
+      modalTitle = <h3 style={styleProps.styles.cardHeaderModal}> WHONET DHIS2 INTEGRATION APP-SETTING <br /> <Close style={styleProps.styles.closeIcon} onClick={this.props.handleModal}/></h3>;
     }
     return (
       <div>
@@ -37,7 +37,7 @@ class MappingModal extends React.Component {
         >
           <Card style={styleProps.styles.cardModal}>
               <CardText style={styleProps.styles.cardText}>
-                <h3 style={styleProps.styles.cardHeaderModal}> {modalTitle} <br /> Lab Name: {orgUnitName} <br /> Lab Unique Code: {orgUnitId}<Close style={styleProps.styles.closeIcon} onClick={this.props.handleModal}/></h3>
+                {modalTitle}
                 <Tabs settingType={this.props.settingType} orgUnitId={orgUnitId} orgUnitName={orgUnitName}/>
               </CardText>
           </Card>    

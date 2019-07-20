@@ -113,100 +113,82 @@ class DataElementsTable extends React.Component {
     });
     e.preventDefault();
     let updateArray = e.target;
-    e.preventDefault(); 
-    /*swal({
-      title: "Are you sure want to update?",
-      icon: "warning",
-      buttons: true,
-      dangerMode: true,
-    })
-    .then((willUpdate) => {    
-      if (willUpdate) { */ 
+    const dataLength = updateArray.length;
+    let updateElementsPayload = [];
+    for(let i=0; i< dataLength-1; i++) {
+      await ( async(currentData, currentIndex) => {
+        const elementObj = Object.entries(currentData);
+        let len = elementObj.length;
 
-        const dataLength = updateArray.length;
-        let updateElementsPayload = [];
-        for(let i=0; i< dataLength-1; i++) {
-          await ( async(currentData, currentIndex) => {
-            const elementObj = Object.entries(currentData);
-            let len = elementObj.length;
+        for( let j=0; j < 1; j++  ) {
+          await ( async ([columnName, columnValue], index ) => {
+            if(updateArray[i].value !== '' ){
+              const result= await getElementDetails(updateArray[i].id);
+                let customElementString = result.data;
 
-            for( let j=0; j < 1; j++  ) {
-              await ( async ([columnName, columnValue], index ) => {
-                if(updateArray[i].value !== '' ){
-                  const result= await getElementDetails(updateArray[i].id);
-                    let customElementString = result.data;
-
-                    // This json payload is for dataelements code updates
-                    //let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"code": updateArray[i].value});
-                    
-                    // Array for datastore update
-                    updateElementsPayload.push({"id": customElementString.id,"name": customElementString.name,"sourceCode": updateArray[i].value,"code": customElementString.code});                
-                }    
-              } ) (elementObj[j], {}, j);
-            } 
-            
-          } ) ( updateArray[i], {}, i );
-        }
-        // Find the setting key exist or not
-        const dataStoreNameSpace = await getDataStoreNameSpace(this.state.orgUnitId)
-        .then((response) => {      
-          return response.data;
-        }).catch(error => {
-          console.log("error.response.data.httpStatusCode: ", error.response.data.httpStatusCode);
-        });
-        // If there is no key exist then create first then add settings data
-        if (typeof dataStoreNameSpace === 'undefined') {
-          await createDateStoreNameSpace('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(this.state.orgUnitId)).then(info=>{
-              console.log("Info: ", info.data);
+                // This json payload is for dataelements code updates
+                //let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"code": updateArray[i].value});
+                
+                // Array for datastore update
+                updateElementsPayload.push({"id": customElementString.id,"name": customElementString.name,"sourceCode": updateArray[i].value,"code": customElementString.code});                
+            }    
+          } ) (elementObj[j], {}, j);
+        } 
+        
+      } ) ( updateArray[i], {}, i );
+    }
+    // Find the setting key exist or not
+    const dataStoreNameSpace = await getDataStoreNameSpace(this.state.orgUnitId)
+    .then((response) => {      
+      return response.data;
+    }).catch(error => {
+      console.log("error.response.data.httpStatusCode: ", error.response.data.httpStatusCode);
+    });
+    // If there is no key exist then create first then add settings data
+    if (typeof dataStoreNameSpace === 'undefined') {
+      await createDateStoreNameSpace('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(this.state.orgUnitId)).then(info=>{
+          console.log("Info: ", info.data);
+      });
+      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": updateElementsPayload, "attributes":[] }) )
+      .then((response) => {
+        if(response.data.httpStatus === "OK" ){
+          this.setState({
+            loading: false,
           });
-          await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": updateElementsPayload}) )
-          .then((response) => {
-            if(response.data.httpStatus === "OK" ){
-              this.setState({
-                loading: false,
-              });
-              swal("Setting information was updated successfully!", {
-                  icon: "success",
-              });
-            }
-            console.log("Console results: ", response.data);
-          }).catch(error => { 
-            console.log({error}); 
-            swal("Sorry! Unable to update setting information!", {
-                  icon: "error",
-            });
-          });
-
-        } else {
-          await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": updateElementsPayload}) )
-          .then((response) => {
-            if(response.data.httpStatus === "OK" ){
-              this.setState({
-                loading: false,
-              });
-              swal("Setting information was updated successfully!", {
-                  icon: "success",
-              });
-            }
-            console.log("Console results: ", response.data);
-          }).catch(error => { 
-            console.log({error}); 
-            swal("Sorry! Unable to update setting information!", {
-                  icon: "error",
-            });
+          swal("Setting information was updated successfully!", {
+              icon: "success",
           });
         }
-      /*} else {
-        swal({
-            title: "Your data is safe!",
-            icon: "success",
+        console.log("Console results: ", response.data);
+      }).catch(error => { 
+        console.log({error}); 
+        swal("Sorry! Unable to update setting information!", {
+              icon: "error",
         });
-        this.setState({
-          loading: false,
+      });
+
+    } else {
+      dataStoreNameSpace.elements = updateElementsPayload;
+      let finalPayload = dataStoreNameSpace;
+      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(finalPayload) )
+      .then((response) => {
+        if(response.data.httpStatus === "OK" ){
+          this.setState({
+            loading: false,
+          });
+          swal("Setting information was updated successfully!", {
+              icon: "success",
+          });
+        }
+        console.log("Console results: ", response.data);
+      }).catch(error => { 
+        console.log({error}); 
+        swal("Sorry! Unable to update setting information!", {
+              icon: "error",
         });
-      }
-    });*/
-    
+      });
+    }
+   
   }
   renderDataElements() {
     const classes = this.props;
@@ -214,7 +196,6 @@ class DataElementsTable extends React.Component {
     
     let content = mergedArrayData.map(datum => {
       let editUrl = config.baseUrl+"dhis-web-maintenance/#/edit/dataElementSection/dataElement/"+datum.dataElement.id;
-      //datum.dataElement.attributeValues.map( val => val.value) for meta attributes
       return (
         <TableRow key={datum.dataElement.id}>
           <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>

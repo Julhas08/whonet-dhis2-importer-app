@@ -63,7 +63,8 @@ class WHONETFileReader extends React.Component {
             mappingCsvData: [],
             duplicateStatus: false,
             trackedEntityInstance: "",
-            dataStoreNamespace: [],
+            dataStoreNamespaceElements: [],
+            dataStoreNamespaceAttributes: [],
         };
         this.uploadCSVFile = this.uploadCSVFile.bind(this);
             
@@ -171,7 +172,7 @@ class WHONETFileReader extends React.Component {
     /**
     * @input {result}-selected parsed csv file
     * {orgUnitId}-get the selected org unit UID
-    * {resultMappedElement} returns the mapped elements
+    * {elementsFilterResult} returns the mapped elements
     * {attributesFilterResult} returns the mapped attributes
     */
     async uploadCSVFile(result) {
@@ -184,10 +185,12 @@ class WHONETFileReader extends React.Component {
         let trackedEntityJson, eventDate;
         await getDataStoreNameSpace(orgUnitId).then((response) => {
           this.setState({
-            dataStoreNamespace : response.data.elements      
+            dataStoreNamespaceElements   : response.data.elements,      
+            dataStoreNamespaceAttributes : response.data.attributes      
           }); 
         }).catch(error => this.setState({error: true}));
-        const dataStoreNamespace = this.state.dataStoreNamespace;
+        const dataStoreNamespaceElements   = this.state.dataStoreNamespaceElements;
+        const dataStoreNamespaceAttributes = this.state.dataStoreNamespaceAttributes;
 
         const csvLength = csvData.length
         for(let i=0; i< csvLength-1; i++) {
@@ -200,54 +203,61 @@ class WHONETFileReader extends React.Component {
             for( let j=0; j < len-1; j++  ) {
 
               duplicateStatus = await ( async ([columnName, columnValue], duplicate, index ) => {
-
+                let elementsFilterResult, attributesFilterResult;
                 if(config.settingType !== 'multiLab'){
                   
-                  let resultMappedElement = this.state.dataElements.filter((element) => {                
+                  elementsFilterResult = this.state.dataElements.filter((element) => {                
                     return element.dataElement.code === columnName;  
                   });
-                  if(resultMappedElement.length >= 1){
+                  if(elementsFilterResult.length >= 1){
                     let matchResult = columnValue.match(/\//g);
                     if(matchResult !== null && matchResult.length === 2){
                       elementValue = formatDate(columnValue);
                     } else {
                       elementValue = columnValue.replace(/[=><_]/gi, '');
                     } 
-                    elementId = resultMappedElement[0].dataElement.id;
+                    elementId = elementsFilterResult[0].dataElement.id;
                     eventsPayload[index] = {
                       "dataElement": elementId, 
                       "value": elementValue
                     };   
                   }
-                } else {
-                  let resultMappedElement = dataStoreNamespace.filter((element) => {                
-                    return element.sourceCode === columnName;  
+                  if(columnName === config.dateColumn){
+                    eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
+                  } 
+
+                  let attributesFilterResult = this.state.attributes.filter(function(attribute) {
+                    return attribute.code === columnName;
                   });
 
-                  if(resultMappedElement.length >= 1){
+                } else {
+                  elementsFilterResult = dataStoreNamespaceElements.filter((element) => {
+                    return element.sourceCode === columnName;  
+                  });
+                  
+                  if(elementsFilterResult.length >= 1){
                     let matchResult = columnValue.match(/\//g);
                     if(matchResult !== null && matchResult.length === 2){
                       elementValue = formatDate(columnValue);
                     } else {
                       elementValue = columnValue.replace(/[=><_]/gi, '');
                     } 
-                    elementId = resultMappedElement[0].id;
+                    elementId = elementsFilterResult[0].id;
                     eventsPayload[index] = {
                       "dataElement": elementId, 
                       "value": elementValue
                     };   
                   }
+                  if(columnName === config.dateColumn){
+                    eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
+                  } 
+
+                  attributesFilterResult = this.state.dataStoreNamespaceAttributes.filter(function(attribute) {
+                    return attribute.sourceCode === columnName;
+                  });
                 }
-                console.log({eventsPayload});                
+
                 
-
-                if(columnName === config.dateColumn){
-                  eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
-                } 
-
-                let attributesFilterResult = this.state.attributes.filter(function(attribute) {
-                  return attribute.code === columnName;
-                });
 
                 if(attributesFilterResult.length >= 1){
                   let attributeValue;
@@ -381,13 +391,13 @@ class WHONETFileReader extends React.Component {
         if ( typeof teiPayloadString !== 'undefined') {
           try {
             let responseData = false;            
-            // responseData =  await createTrackedEntity(trackedEntityJson);
-            // this.setState({
-            //   teiResponse: responseData.data,
-            //   teiResponseString: JSON.stringify(responseData.data)
-            // });
+            responseData =  await createTrackedEntity(trackedEntityJson);         
                        
             if(typeof responseData.data !== 'undefined'){
+              this.setState({
+                teiResponse: responseData.data,
+                teiResponseString: JSON.stringify(responseData.data)
+              });
               if(responseData.data.httpStatus === "OK" ){
                 swal("Successfully uploaded WHONET data!", {
                     icon: "success",
@@ -556,6 +566,20 @@ class WHONETFileReader extends React.Component {
         if(this.state.isMultipleLabSettingModalOpen){
           modal = <MappingModal isModalOpen={this.state.isMultipleLabSettingModalOpen}  handleModal={this.handleMultipleLabSettingModal} settingType={config.settingType} orgUnitId={this.props.orgUnitId} orgUnitName={this.props.orgUnit}/>
         } 
+
+        /**
+        * CsvMappingColumns-bottom csv file header mapping
+        * @returns-logger
+        */  
+        if( Object.keys(this.state.mappingCsvData).length > 0 || Object.entries(this.state.mappingCsvData).length > 0 ){
+          if(config.settingType === 'multiLab'){
+            //let orgUnitId = document.getElementById('selectedOrgUnitId').value;
+            logger = <CsvMappingColumns csvData = {this.state.mappingCsvData}attributes={this.state.attributes} settingType={config.settingType} orgUnitId={this.props.orgUnitId}/>;
+          } else {
+            logger = <CsvMappingColumns csvData = {this.state.mappingCsvData} dataElements={this.state.dataElements} attributes={this.state.attributes} settingType={config.settingType}/>;
+          }
+          
+        }
         /**
         * ImportResults-import result summary & logger for json response preview
         * @returns-logger
@@ -563,13 +587,6 @@ class WHONETFileReader extends React.Component {
         if( Object.keys(this.state.teiResponse).length > 0 || Object.entries(this.state.teiResponse).length > 0 ){
           teiResponse = <ImportResults teiResponse={this.state.teiResponse} />
           logger = <LoggerComponent teiResponse={this.state.teiResponse}  teiResponseString={this.state.teiResponseString}/>
-        }
-        /**
-        * CsvMappingColumns-bottom csv file header mapping
-        * @returns-logger
-        */  
-        if( Object.keys(this.state.mappingCsvData).length > 0 || Object.entries(this.state.mappingCsvData).length > 0 ){
-          logger = <CsvMappingColumns csvData = {this.state.mappingCsvData} dataElements={this.state.dataElements} attributes={this.state.attributes}/>;
         }
         /**
         * HelpModal-static data for the user guideline, how this mapping works

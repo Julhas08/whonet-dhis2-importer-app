@@ -15,7 +15,7 @@ class SettingTab extends React.Component {
                     <Elements orgUnitId={orgUnitId} orgUnitName={orgUnitName}/> 
                   </Tab>;
           attributes = <Tab label='Attributes'>
-                     <Attributes /> 
+                     <Attributes orgUnitId={orgUnitId} orgUnitName={orgUnitName}/> 
                   </Tab>;
         } else {
           elements = <Tab label='Data Elements'>
