@@ -18,6 +18,7 @@ export default class CustomOrgUnitTreeView extends Component {
 
   render() {
     let treeBox;
+    console.log("this.props.orgUnits: ", this.props.orgUnits);
     if(typeof this.props.orgUnits !== 'undefined' || this.props.orgUnits.isArray()){
       treeBox = this.props.orgUnits.map(rowData => (
         <TreeCheckbox

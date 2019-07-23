@@ -103,7 +103,7 @@ class AttributesTable extends React.Component {
                   <strong><h3> ATTRIBUTES</h3></strong>
                 </TableCell>
                 <TableCell style={styleProps.styles.tableHeader}> 
-                  <strong><h3> WHONET CODES </h3></strong> 
+                  <strong><h3> CODES </h3></strong> 
                 </TableCell>
                 <TableCell style={styleProps.styles.tableHeader}> 
                   <strong><h3> EDIT IN DHIS2 </h3></strong> 
@@ -152,15 +152,40 @@ class AttributesTable extends React.Component {
 
             getAttributeDetails(updateArray[i].id).then((response) => {
                 let customAttributeString = response.data;
-                let attributeId = customAttributeString.attributeValues.map( val => val.attribute.id);
+                /*let attributeId = customAttributeString.attributeValues.map( val => val.attribute.id);
                 if(typeof attributeId[0] !== 'undefined'){
                   attributeId = attributeId[0];
                 } else {
                   attributeId = config.metaAttributeUId;
                 }
                  
-                //let jsonPayload = JSON.stringify({"name": customAttributeString.name,"shortName": customAttributeString.shortName,"aggregationType": customAttributeString.aggregationType,"domainType": customAttributeString.domainType,"valueType": customAttributeString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});
-                let jsonPayload = JSON.stringify({"name": customAttributeString.name,"shortName": customAttributeString.shortName,"aggregationType": customAttributeString.aggregationType,"domainType": customAttributeString.domainType,"valueType": customAttributeString.valueType,"code": updateArray[i].value});
+                let jsonPayload = JSON.stringify({"name": customAttributeString.name,"shortName": customAttributeString.shortName,"aggregationType": customAttributeString.aggregationType,"domainType": customAttributeString.domainType,"valueType": customAttributeString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});*/
+                let jsonPayload = "";
+                if(typeof customAttributeString.optionSet !=='undefined' ){
+
+                  jsonPayload = JSON.stringify({
+                    "name": customAttributeString.name,
+                    "shortName": customAttributeString.shortName,
+                    "aggregationType": customAttributeString.aggregationType,
+                    "domainType": customAttributeString.domainType,
+                    "valueType": customAttributeString.valueType,
+                    "code": updateArray[i].value,
+                    "optionSet": {
+                          "id": customAttributeString.optionSet.id
+                      }
+                  });
+
+                } else {
+
+                  jsonPayload = JSON.stringify({
+                    "name": customAttributeString.name,
+                    "shortName": customAttributeString.shortName,
+                    "aggregationType": customAttributeString.aggregationType,
+                    "domainType": customAttributeString.domainType,
+                    "valueType": customAttributeString.valueType,
+                    "code": updateArray[i].value
+                  });
+                }  
                 //console.log("jsonPayload Attribute: ", jsonPayload);
                 metaDataUpdate('api/trackedEntityAttributes/'+updateArray[i].id, jsonPayload)
                   .then((response) => {

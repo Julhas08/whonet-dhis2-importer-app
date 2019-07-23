@@ -17,13 +17,16 @@ export default class CustomOrgUnitTreeView extends Component {
   };  
   render=()=>{
     var children;
-    // const isChecked = index === selectedId;
-    if (this.props.node.children != null) {
-      children = this.props.node.children.map(function(node, index) {
-        return <li key={index}><CustomOrgUnitTreeView node={node} /></li>
-      });
-    }
+      console.log("this.props.node: ", this.props.node);
+      let nodeData = JSON.parse(this.props.node);
+      if (nodeData.children.length > 0 ) {
+        children = nodeData.children.map(function(node, index) {
+          console.log("Node: ", node);
+          //return <li key={index}><CustomOrgUnitTreeView node={node} /></li>
+        });
+      }
 
+    
     var style = {};
     if (!this.state.visible) {
       style.display = "none";

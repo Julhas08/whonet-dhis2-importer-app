@@ -105,7 +105,7 @@ class DataElementsTable extends React.Component {
                 <strong><h3> DATA ELEMENTS</h3></strong>
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h3> WHONET CODES </h3></strong> 
+                <strong><h3> CODES </h3></strong> 
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
                 <strong><h3> EDIT IN DHIS2 </h3></strong> 
@@ -153,19 +153,50 @@ class DataElementsTable extends React.Component {
 
             getElementDetails(updateArray[i].id).then((response) => {
                 let customElementString = response.data;
-                let attributeId = customElementString.attributeValues.map( val => val.attribute.id);
+                /*let attributeId = customElementString.attributeValues.map( val => val.attribute.id);
                 if(typeof attributeId[0] !== 'undefined'){
                   attributeId = attributeId[0];
                 } else {
                   attributeId = config.metaAttributeUId;
-                }
+                }*/
                 
                 /**
                 * This below commented json was developed for meta attributes value update 
                 * Keep this code until final deployment
                 */ 
-                //let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});   
-                let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"code": updateArray[i].value});
+                //let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});
+                let jsonPayload = "";
+                if(typeof customElementString.optionSet !=='undefined' ){
+
+                  jsonPayload = JSON.stringify({
+                    "name": customElementString.name,
+                    "shortName": customElementString.shortName,
+                    "aggregationType": customElementString.aggregationType,
+                    "domainType": customElementString.domainType,
+                    "valueType": customElementString.valueType,
+                    "code": updateArray[i].value,
+                    "optionSet": {
+                        "id": customElementString.optionSet.id
+                    },
+                    "categoryCombo": {
+                        "id": customElementString.categoryCombo.id
+                    }
+                  });
+
+                } else {
+                  jsonPayload = JSON.stringify({
+                    "name": customElementString.name,
+                    "shortName": customElementString.shortName,
+                    "aggregationType": customElementString.aggregationType,
+                    "domainType": customElementString.domainType,
+                    "valueType": customElementString.valueType,
+                    "code": updateArray[i].value,
+                    "categoryCombo": {
+                        "id": customElementString.categoryCombo.id
+                    }
+                  });
+                }  
+                
                 metaDataUpdate('api/dataElements/'+updateArray[i].id, jsonPayload)
                   .then((response) => {
                     console.log("Console results: ", response.data);

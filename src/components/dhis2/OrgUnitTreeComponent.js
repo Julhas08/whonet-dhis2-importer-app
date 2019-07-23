@@ -32,7 +32,7 @@ export default class OrgUnitTreeComponent extends React.Component {
       userAuthority: "", 
       levelOne: false,
       customTree: false,
-      tree: "",
+      tree: [],
 		};	
 		/**
 		* @{symbolValueCurrentUser}-returns the current user symbol values 
@@ -97,8 +97,55 @@ export default class OrgUnitTreeComponent extends React.Component {
 
 		getMe().then( me =>{
 			this.setState({currentUserOrgUnits: me.data.organisationUnits});
+			let total = {};
+			let data = me.data.organisationUnits;
+			const len = data.length;
+
+			// generate all data with children
+			for(let i=0; i<len; i++) {
+			  const current = data[i];
+			  total[current.id] = total[current.id] || {};
+
+			  total[current.id] = {...total[current.id], ...current};
+
+			  if( current.parent ) {
+			    total[current.parent.id] = total[current.parent.id] || {};
+			    total[current.parent.id]["children"] = total[current.parent.id]["children"] && typeof total[current.parent.id]["children"] === "boolean" ? [] : total[current.parent.id]["children"] ? total[current.parent.id]["children"] : [];
+			    
+			    total[current.parent.id]["children"].push(current);
+			  }
+			}
+			 
+			const value = {};
+			// set children data into parent
+			for(let key in total) {
+			  if( total[key].parent ) {
+			    total[total[key].parent.id] = total[total[key].parent.id] || {};
+			    findChildren(total[key], total);
+			    delete total[key];
+			  }
+			}
+
+			// find parent
+			function findChildren(obj, total) {
+			  for(let key in total) {
+			    if( obj.parent.id === total[key].id ) {
+			      total[key]['children'] = total[key]['children'] && typeof total[key]['children'] === "boolean" ? [] :  total[key]['children'];
+			      total[key]['children'].push( obj);
+			    }
+			    if( total[key].childrenList && total[key].childrenList.length ) {
+			      findChildren(obj, total[key].childrenList)
+			    }
+			  }
+			}
+
+			for(let key in total) {
+			  if(Object.keys( total[key] ).length === 0) delete  total[key];
+			}
+			// let tree = JSON.stringify(total['ANGhR1pa8I5'], null, 2);
+			let tree = JSON.stringify(total['ANGhR1pa8I5'], null, 2);
 			//console.log("me.data.organisationUnits[i]: ", JSON.stringify(me.data.organisationUnits));
-			let id1, name1, level1=[], id2, name2, level2=[], id3, name3, level3=[], tree=[];
+			let id1, name1, level1=[], id2, name2, level2=[], id3, name3, level3=[];
 			var rootTreeJson = [];
 			var rootTreeJson1 = [];
 			for (var i = 0; i < me.data.organisationUnits.length; i++) {
@@ -139,16 +186,10 @@ export default class OrgUnitTreeComponent extends React.Component {
 			if(orgUnitLevel3 !== '' || typeof orgUnitLevel3 !== 'undefined') {
 				this.setState({ orgUnitLevel: orgUnitLevel3 });				
 			}	
-			tree.push({
-			  level1: level1,
-			  children: [ {
-			    level2: level2,				  
-				  children: [ {
-				   level3: level3
-					}]
-				}]
-			});	
-			//console.log(JSON.stringify(tree));
+			
+			
+			
+			this.setState({ orgUnitLevel: tree });	
 			this.setState({ tree: tree });
 
 		});
@@ -244,46 +285,10 @@ export default class OrgUnitTreeComponent extends React.Component {
 				
 			}
 		}
-		if(this.state.customTree){
-			let tree = {
-			  id: "id1",
-			  name: "India",
-			  level: 1,
-			  children: [ {
-			    id: "id2",
-			  	name: "Andaman and Nicobar",
-				  level: 2,
-				  parent: [{id: "parentId"}],
-				  children: [ {
-				    id: "id3",
-			  		name: "Chittoor",
-					  level: 3,
-					  parent: [{id: "parentId"}]
-					},{
-				    id: "id3",
-			  		name: "East Godavari",
-					  level: 3,
-					  parent: [{id: "parentId"}]
-					}]
-				},{
-			    id: "id2",
-			  	name: "Andhra Pradesh",
-				  level: 2,
-				  parent: [{id: "parentId"}],
-				  children: [ {
-				    id: "id3",
-			  		name: "Nicobar",
-					  level: 3,
-					  parent: [{id: "parentId"}]
-					},{
-				    id: "id3",
-			  		name: "Anantapur",
-					  level: 3,
-					  parent: [{id: "parentId"}]
-					}]
-				}]
-			}	
-			customTree = <CustomTree node={tree}/>
+		if(this.state.customTree && this.state.tree.length >0 ){
+			
+  		let node =this.state.tree;
+			customTree = <CustomTree node={node}/>
 		}
 		// console.log("this.state.orgUnitLevel: ", this.state.orgUnitLevel);		
 

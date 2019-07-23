@@ -32,7 +32,6 @@ export default class CsvMappingColumns extends React.Component {
     let data = Object.entries(this.props.csvData);
     let mapCode = "";
     const dataStoreNamespaceElements = this.state.dataStoreNamespaceElements;
-    console.log("dataStoreNamespaceElements: ", dataStoreNamespaceElements);
     let dataValues = data.map( (value, key) =>{
         let resultMappedElement, attributesFilterResult;             
         if(this.props.settingType === 'multiLab'){
