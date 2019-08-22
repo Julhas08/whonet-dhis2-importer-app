@@ -12,8 +12,11 @@ import * as styleProps  from '../../ui/Styles';
 import * as config  from '../../../config/Config';
 import { 
     metaDataUpdate,
-    getOptionDetails,
-    getOptionsInOptionGroups,
+    getOptionSetDetails,
+    getPrograms,
+    getDataStoreNameSpace,
+    createDateStoreNameSpace,
+    getOptionSets
 } from '../../api/API';
 
 class OptionsTable extends React.Component {
@@ -22,86 +25,233 @@ class OptionsTable extends React.Component {
     this.state = {
       value   : '',
       loading : false,
-      options: [],
+      optionSets: [],
+      optionSets: [],
+      orgUnitId: "",
+      OrgUnitName: "",
+      dataStoreNamespace: [],
+      mergedArrayData: [],
     };
 
-    this.handleInputChange = this.handleInputChange.bind(this);
-    this.renderOptions        = this.renderOptions.bind(this);
-    this.handleSubmitOptions= this.handleSubmitOptions.bind(this);
+    this.handleInputChange   = this.handleInputChange.bind(this);
+    this.renderOptionSets    = this.renderOptionSets.bind(this);
+    this.handleOptionsSubmit = this.handleOptionsSubmit.bind(this);
   }
-  componentWillMount(){
+  /**
+  *
+  *
+  */
+  async componentWillMount(){
+    this.setState({
+      orgUnitId: this.props.orgUnitId,
+      OrgUnitName: this.props.OrgUnitName
+    });
     let self = this;
-      getOptionsInOptionGroups().then((response) => {
-        self.setState({
-          options : response.data       
-        }); 
-      }).catch(error => this.setState({error: true}));
+
+    await getOptionSets().then((response) => {
+      self.setState({
+        optionSets : response.data.optionSets       
+      }); 
+    }).catch(error => this.setState({error: true}));
+
+
+    await getDataStoreNameSpace(this.props.orgUnitId).then((response) => {
+      self.setState({
+        dataStoreNamespace : response.data.options      
+      }); 
+    }).catch(error => this.setState({error: true}));
+
+    // Merge two array
+    const mergeById = (jsonPayload1, jsonPayload2) =>
+    jsonPayload1.map(itm => ({
+        ...jsonPayload2.find((item) => (item.id === itm.dataElement.id) && item),
+        ...itm
+    }));
+    let mergedArray = mergeById(this.state.optionSets, this.state.dataStoreNamespace);
+    this.setState({mergedArrayData: mergedArray});
+
   }
   /**
   * {id, value} returns the element id and input value
-  * {options} store the current state elements array
+  * {optionSets} store the current state elements array
   * {targetIndex} return the 
-  * If there is data in the setting input text field, then update/ set the values `options` state
+  * If there is data in the setting input text field, then update/ set the values `optionSets` state
   * if {attributeValues} is empty, develop custom payload from configuration `config.metaAttributeName` & `config.metaAttributeUId` 
   */
-  handleInputChange(e) {   
+  handleInputChange(e) {    
     
     const {id, value}  = e.target;
-    let options      = this.props.options;
-    const targetIndex  = options.findIndex(datum => {
-      return datum.id == id;
+    let {optionSets, dataStoreNamespace, mergedArrayData} = this.state;
+    
+    const targetIndex  = mergedArrayData.findIndex(datum => {
+      return datum.id === id;
     });
 
-    if(targetIndex !== -1){      
-      if(options[targetIndex].attributeValues.length > 0 ){
-        options[targetIndex].attributeValues[0].value = value;
-        this.setState({options});
+    if(targetIndex !== -1){ 
+      if(mergedArrayData[targetIndex].mapCode !== '' || typeof mergedArrayData[targetIndex].mapCode !== 'undefined' ){
+        mergedArrayData[targetIndex].mapCode = value;
+        this.setState({mergedArrayData});
       } else {
-        let json = { "attribute": { "name": config.metaAttributeName, "id": config.metaAttributeUId}, "value": value };
-        let valueArray = options[targetIndex].attributeValues.push(json);
-         valueArray= value;
-        this.setState({options});
-      }
-     
+        mergedArrayData[targetIndex].mapCode=value;
+        this.setState({mergedArrayData});
+      }     
+    } else {
+      const targetIndex  = mergedArrayData.findIndex(datum => {
+        return datum.options.id === id;
+      });
+      mergedArrayData[targetIndex].id=id;
+      mergedArrayData[targetIndex].mapCode=value;
+      this.setState({mergedArrayData});
     }
+    // console.log("mergedArrayData: ", mergedArrayData);
   }
-  renderOptions() {
-    const classes = this.props;
-    const {options} = this.state;
-    let content;
-    console.log("this.props.options: ", this.state.options);
-    if(options.length > 0){
-      content = this.props.options.map(datum => {
-      let editUrl = config.baseUrl+'dhis-web-maintenance/#/edit/categorySection/categoryOption/'+datum.id;
-      return (
-        <TableRow key={datum.id}>
-          <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
-            {datum.name}
-          </TableCell>
-          <TableCell style={styleProps.styles.tableHeader}>
-          <input type="text" id={datum.id} value={datum.attributeValues.map( val => val.value)}
-            onChange={this.handleInputChange} style={styleProps.styles.inputText}/>
-          </TableCell>         
-        </TableRow>
-      )
+  /**
+  *
+  *
+  *
+  */
+  async handleOptionsSubmit(e) {
+    this.setState({ 
+      loading: true,
+    });
+    e.preventDefault();
+    let updateArray = e.target;
+    const dataLength = updateArray.length;
+    let updateOptionsPayload = [];
+    for(let i=0; i< dataLength-1; i++) {
+      await ( async(currentData, currentIndex) => {
+        const optionObj = Object.entries(currentData);
+        let len = optionObj.length;
+
+        for( let j=0; j < 1; j++  ) {
+          await ( async ([columnName, columnValue], index ) => {
+            console.log("updateArray[i].value: ", updateArray[i].value);
+            if(updateArray[i].value !== '' ){
+              console.log("updateArray[i].id: ", updateArray[i].id);
+              const result= await getOptionSetDetails(updateArray[i].id);
+              console.log("Result: ", result);
+                let optionSetDetailInfo = result.data;
+                
+                // Array for datastore update
+                updateOptionsPayload.push({
+                  "id": optionSetDetailInfo.id,
+                  "name": optionSetDetailInfo.name,
+                  "options": {
+                    "id": updateArray[i].id,
+                    "name": updateArray[i].name,
+                    "code": updateArray[i].code,
+                    "mapCode": updateArray[i].value,
+                  }
+                  
+                });   
+                console.log("updateOptionsPayload: ", updateOptionsPayload);             
+            }    
+          } ) (optionObj[j], {}, j);
+        } 
+        
+      } ) ( updateArray[i], {}, i );
+    }
+    // Find the setting key exist or not
+    const dataStoreNameSpace = await getDataStoreNameSpace(this.state.orgUnitId)
+    .then((response) => {      
+      return response.data;
+    }).catch(error => {
+      console.log("error.response.data.httpStatusCode: ", error.response.data.httpStatusCode);
+    });
+    // If there is no key exist then create first the option,element and attributes the add settings data
+    if (typeof dataStoreNameSpace === 'undefined') {
+
+      await createDateStoreNameSpace('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(this.state.orgUnitId)).then(info=>{
+          console.log("Info: ", info.data);
+      });
+      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": [], "attributes": [],"options":updateOptionsPayload }) )
+      .then((response) => {
+        if(response.data.httpStatus === "OK" ){
+          this.setState({
+            loading: false,
+          });
+          swal("Setting information was updated successfully!", {
+              icon: "success",
+          });
+        }
+        console.log("Console results: ", response.data);
+      }).catch(error => { 
+        console.log({error}); 
+        swal("Sorry! Unable to update setting information!", {
+              icon: "error",
+        });
+      });
+
+    } else {
+      dataStoreNameSpace.elements = updateOptionsPayload;
+      let finalPayload = dataStoreNameSpace;
+      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(finalPayload) )
+      .then((response) => {
+        if(response.data.httpStatus === "OK" ){
+          this.setState({
+            loading: false,
+          });
+          swal("Setting information was updated successfully!", {
+              icon: "success",
+          });
+        }
+        console.log("Console results: ", response.data);
+      }).catch(error => { 
+        console.log({error}); 
+        swal("Sorry! Unable to update setting information!", {
+              icon: "error",
+        });
       });
     }
-    
+   
+  }
+  renderOptionSets() {
+    const classes = this.props;
+    let {optionSets, dataStoreNamespace, mergedArrayData} = this.state;
+    //console.log("mergedArrayData: ", mergedArrayData);
+    let content = optionSets.map(datum => {
+      //console.log(datum.options);
+      return datum.options.map(result=>{
+        return (
+          <TableRow key={result.id}>
+            <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
+              {datum.name}
+            </TableCell> 
+            <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
+              {result.name}
+            </TableCell>
+            <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
+              {result.code}
+            </TableCell>
+            <TableCell style={styleProps.styles.tableHeader}>
+              <input type="text" id={datum.id}
+              onChange={this.handleInputChange} style={styleProps.styles.inputText}/>
+            </TableCell> 
+          </TableRow>
+        )
+      })  
+    });
     let spinner;
     if(this.state.loading){
       spinner = <LinearProgress />
     }
     return (
       <Paper className={classes.root}  style={styleProps.styles.tableScroll}>
-        <form onSubmit={(e) => this.handleSubmitOptions(e)} id="whonetsetting">
+        <form onSubmit={(e) => this.handleOptionsSubmit(e)} id="whonetsetting">
         <Table className={classes.table}>
           <TableHead>
             <TableRow>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> Attributes</h2></strong>
+                <strong><h3> OPTION SETS </h3></strong>
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h2> WHONET Codes </h2></strong> 
+                <strong><h3> OPTION NAME</h3></strong>
+              </TableCell>
+              <TableCell style={styleProps.styles.tableHeader}> 
+                <strong><h3> OPTION CODE</h3></strong>
+              </TableCell>
+              <TableCell style={styleProps.styles.tableHeader}> 
+                <strong><h3> MAP CODE </h3></strong> 
               </TableCell>
             </TableRow>
           </TableHead>
@@ -109,88 +259,20 @@ class OptionsTable extends React.Component {
             {content}             
           </TableBody>          
         </Table>
-        <input type="submit" value="Save Attributes" style={styleProps.styles.submitButton}/>
+        <input type="submit" value="Save Options" style={styleProps.styles.submitButton}/>
         </form> 
         {spinner}
       </Paper>
     )
   }
-  handleSubmitOptions(e) {
-    this.setState({ // need to upgrade this logic
-      loading: true,
-    });
-    e.preventDefault();
-    let updateArray = e.target;   
-
-    swal({
-      title: "Are you sure want to update?",
-      icon: "warning",
-      buttons: true,
-      dangerMode: true,
-    })
-    .then((willUpdate) => {    
-      if (willUpdate) {        
-        let j=0;
-        /**
-        * Iterate {updateArray} that contains the updated values from settings input
-        * {getOptionDetails} returns the updated options detail
-        * {customOptionsString} store the data element detail information
-        * {attributeId} returns whether the existing meta attribute exist or not. If do not exist then create the `attribute` array from static configuration `config.metaAttributeUId` 
-        * {jsonPayload} returns the final payload to update the meta options 
-        * {metaDataUpdate} does the `PUT` operations and return messages
-        * @returns j-success message and close the loader
-        */
-        for (let i = 0; i < updateArray.length-1; i++) { //updateArray.length-1
-         
-          if(/*updateArray[i].value !== '' &&*/ updateArray[i].value !== 'true' ){
-
-            getOptionDetails(updateArray[i].id).then((response) => {
-                let customOptionsString = response.data;
-                let attributeId = customOptionsString.attributeValues.map( val => val.attribute.id);
-                if(typeof attributeId[0] !== 'undefined'){
-                  attributeId = attributeId[0];
-                } else {
-                  attributeId = config.metaAttributeUId;
-                }
-                 
-                let jsonPayload = JSON.stringify({"name": customOptionsString.name,"shortName": customOptionsString.shortName,"attributeValues": [{"value": updateArray[i].value,"attribute": { "id": attributeId }}]});
-                console.log("jsonPayload options: ", jsonPayload);
-                  /*metaDataUpdate('api/trackedEntityAttributes/'+updateArray[i].id, jsonPayload)
-                  .then((response) => {
-                    console.log("Response: ", response.data);
-                  });*/
-              });            
-            }
-
-          j++;
-        }
-        if(j === updateArray.length-1){
-          this.setState({
-            loading: false,
-          });
-          swal("Successfully updated meta attribute!", {
-              icon: "success",
-          });
-        }
-      } else {
-        swal({
-            title: "Your data is safe!",
-            icon: "success",
-        });
-        this.setState({
-          loading: false,
-        });
-      }
-    });
-    
-  }
+  
   render(){
     
-    const dataElementList = this.renderOptions();
+    const optionSetsList = this.renderOptionSets();
     
     return (
       <div>
-        {dataElementList}
+        {optionSetsList}
       </div>
     );
 

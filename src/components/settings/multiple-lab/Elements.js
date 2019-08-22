@@ -130,7 +130,12 @@ class DataElementsTable extends React.Component {
                 //let jsonPayload = JSON.stringify({"name": customElementString.name,"shortName": customElementString.shortName,"aggregationType": customElementString.aggregationType,"domainType": customElementString.domainType,"valueType": customElementString.valueType,"code": updateArray[i].value});
                 
                 // Array for datastore update
-                updateElementsPayload.push({"id": customElementString.id,"name": customElementString.name,"sourceCode": updateArray[i].value,"code": customElementString.code});                
+                updateElementsPayload.push({
+                  "id": customElementString.id,
+                  "name": customElementString.name,
+                  "sourceCode": updateArray[i].value,
+                  "code": customElementString.code
+                });                
             }    
           } ) (elementObj[j], {}, j);
         } 
@@ -195,7 +200,6 @@ class DataElementsTable extends React.Component {
     let {dataElements, dataStoreNamespace, mergedArrayData} = this.state;
     
     let content = mergedArrayData.map(datum => {
-      let editUrl = config.baseUrl+"dhis-web-maintenance/#/edit/dataElementSection/dataElement/"+datum.dataElement.id;
       return (
         <TableRow key={datum.dataElement.id}>
           <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
@@ -208,15 +212,6 @@ class DataElementsTable extends React.Component {
             <input type="text" id={datum.dataElement.id} value={datum.sourceCode || ''}
             onChange={this.handleInputChange} style={styleProps.styles.inputText}/>
           </TableCell> 
-
-          <TableCell style={styleProps.styles.tableHeader}>
-            <a href={editUrl} target="_blank">
-              <Button variant="contained" component="span" className={classes.button}>
-                Edit
-              </Button> 
-            </a> 
-          </TableCell>  
-
         </TableRow>
       )
     });
@@ -238,9 +233,6 @@ class DataElementsTable extends React.Component {
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
                 <strong><h3> ORG UNIT CODES </h3></strong> 
-              </TableCell>
-              <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h3> EDIT IN DHIS2 </h3></strong> 
               </TableCell>
             </TableRow>
           </TableHead>

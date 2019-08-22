@@ -197,7 +197,6 @@ class Attributes extends React.Component {
     const classes = this.props;
     let {attributes, dataStoreNamespace, mergedArrayData} = this.state;
     let content = mergedArrayData.map(datum => {
-      let editUrl = config.baseUrl+'dhis-web-maintenance/#/edit/programSection/trackedEntityAttribute/'+datum.id;
       return (
         <TableRow key={datum.id}>
           <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
@@ -209,13 +208,6 @@ class Attributes extends React.Component {
           <TableCell style={styleProps.styles.tableHeader}>
             <input type="text" id={datum.id} value={datum.sourceCode || ''}
             onChange={this.handleInputChange} style={styleProps.styles.inputText}/>
-          </TableCell> 
-          <TableCell style={styleProps.styles.tableHeader}>
-          <a href={editUrl} target="_blank">
-            <Button variant="contained" component="span" className={classes.button}>
-              Edit
-            </Button> 
-          </a>
           </TableCell>          
         </TableRow>
       )
@@ -238,9 +230,6 @@ class Attributes extends React.Component {
               </TableCell>
               <TableCell style={styleProps.styles.tableHeader}> 
                 <strong><h3> ORG UNIT CODES </h3></strong> 
-              </TableCell>
-              <TableCell style={styleProps.styles.tableHeader}> 
-                <strong><h3> EDIT IN DHIS2 </h3></strong> 
               </TableCell>
             </TableRow>
           </TableHead>

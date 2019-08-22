@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, Tab } from '@dhis2/d2-ui-core';
 import Elements from './multiple-lab/Elements';
 import Attributes from './multiple-lab/Attributes';
-// import Options from './multiple-lab/Options';
+import Options from './multiple-lab/Options';
 import DataElementsTable from './DataElementsTable';
 import AttributesTable from './AttributesTable';
 class SettingTab extends React.Component {
@@ -17,6 +17,9 @@ class SettingTab extends React.Component {
           attributes = <Tab label='Attributes'>
                      <Attributes orgUnitId={orgUnitId} orgUnitName={orgUnitName}/> 
                   </Tab>;
+          options = <Tab label='Options'>
+                     <Options orgUnitId={orgUnitId} orgUnitName={orgUnitName}/> 
+                  </Tab>;        
         } else {
           elements = <Tab label='Data Elements'>
                     <DataElementsTable /> 

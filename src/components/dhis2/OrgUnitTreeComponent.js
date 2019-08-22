@@ -185,11 +185,10 @@ export default class OrgUnitTreeComponent extends React.Component {
 			}
 			if(orgUnitLevel3 !== '' || typeof orgUnitLevel3 !== 'undefined') {
 				this.setState({ orgUnitLevel: orgUnitLevel3 });				
-			}	
+			}		
 			
 			
-			
-			this.setState({ orgUnitLevel: tree });	
+			this.setState({ orgUnitLevel: orgUnitLevel3 });	
 			this.setState({ tree: tree });
 
 		});

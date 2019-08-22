@@ -102,6 +102,16 @@ export const getOptionsInOptionGroups = async () => {
 		});
 };
 
+export const getOptionSets = async () => { 
+ 
+    return await get('api/optionSets?filter=id:neq:hRHti3LG2H9&fields=id,name,code,options[:id,name,code]&paging=false')
+      .then(function (response) {       
+      return response;
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+};
 
 /**
 * @retunrs single element detail
@@ -131,8 +141,8 @@ export const getAttributeDetails = async (attributeId) => {
 * Category Options
 * @retunrs single option detail
 */
-export const getOptionDetails = async (optionId) => {
-    return await get('api/categoryOptions/'+optionId)
+export const getOptionSetDetails = async (optionId) => {
+    return await get('api/optionSets/'+optionId)
     	.then(function (response) {    		
 			return response;
 		})
