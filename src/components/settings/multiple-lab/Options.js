@@ -12,7 +12,7 @@ import * as styleProps  from '../../ui/Styles';
 import * as config  from '../../../config/Config';
 import { 
     metaDataUpdate,
-    getOptionSetDetails,
+    getOptionDetails,
     getPrograms,
     getDataStoreNameSpace,
     createDateStoreNameSpace,
@@ -47,14 +47,27 @@ class OptionsTable extends React.Component {
       OrgUnitName: this.props.OrgUnitName
     });
     let self = this;
+    let customizedOptionSets = [];
 
     await getOptionSets().then((response) => {
-      self.setState({
-        optionSets : response.data.optionSets       
-      }); 
+      response.data.optionSets.map( data => {
+        data.options.map(option=>{
+          let arr = {
+            "optionSetId": data.id,
+            "optionSetName": data.name,
+            "id": option.id,
+            "name": option.name,
+            "code": option.code,
+          }
+        customizedOptionSets.push(arr);  // Custom array with the combinations of option set and options
+        })
+      });
+      
     }).catch(error => this.setState({error: true}));
 
-
+    self.setState({
+        optionSets : customizedOptionSets       
+    }); 
     await getDataStoreNameSpace(this.props.orgUnitId).then((response) => {
       self.setState({
         dataStoreNamespace : response.data.options      
@@ -64,16 +77,20 @@ class OptionsTable extends React.Component {
     // Merge two array
     const mergeById = (jsonPayload1, jsonPayload2) =>
     jsonPayload1.map(itm => ({
-        ...jsonPayload2.find((item) => (item.id === itm.dataElement.id) && item),
+        ...jsonPayload2.find((item) => (item.id === itm.id) && item),
         ...itm
     }));
-    let mergedArray = mergeById(this.state.optionSets, this.state.dataStoreNamespace);
-    this.setState({mergedArrayData: mergedArray});
+
+    if (typeof this.state.dataStoreNamespace !== 'undefined') {
+      let mergedArray = mergeById(this.state.optionSets, this.state.dataStoreNamespace);
+      this.setState({mergedArrayData: mergedArray});
+    }
+    
 
   }
   /**
   * {id, value} returns the element id and input value
-  * {optionSets} store the current state elements array
+  * {optionSets} store the current state options array
   * {targetIndex} return the 
   * If there is data in the setting input text field, then update/ set the values `optionSets` state
   * if {attributeValues} is empty, develop custom payload from configuration `config.metaAttributeName` & `config.metaAttributeUId` 
@@ -82,11 +99,9 @@ class OptionsTable extends React.Component {
     
     const {id, value}  = e.target;
     let {optionSets, dataStoreNamespace, mergedArrayData} = this.state;
-    
     const targetIndex  = mergedArrayData.findIndex(datum => {
       return datum.id === id;
     });
-
     if(targetIndex !== -1){ 
       if(mergedArrayData[targetIndex].mapCode !== '' || typeof mergedArrayData[targetIndex].mapCode !== 'undefined' ){
         mergedArrayData[targetIndex].mapCode = value;
@@ -96,14 +111,9 @@ class OptionsTable extends React.Component {
         this.setState({mergedArrayData});
       }     
     } else {
-      const targetIndex  = mergedArrayData.findIndex(datum => {
-        return datum.options.id === id;
-      });
-      mergedArrayData[targetIndex].id=id;
       mergedArrayData[targetIndex].mapCode=value;
       this.setState({mergedArrayData});
     }
-    // console.log("mergedArrayData: ", mergedArrayData);
   }
   /**
   *
@@ -120,33 +130,25 @@ class OptionsTable extends React.Component {
     let updateOptionsPayload = [];
     for(let i=0; i< dataLength-1; i++) {
       await ( async(currentData, currentIndex) => {
-        const optionObj = Object.entries(currentData);
-        let len = optionObj.length;
+        const elementObj = Object.entries(currentData);
+        let len = elementObj.length;
 
         for( let j=0; j < 1; j++  ) {
           await ( async ([columnName, columnValue], index ) => {
-            console.log("updateArray[i].value: ", updateArray[i].value);
             if(updateArray[i].value !== '' ){
-              console.log("updateArray[i].id: ", updateArray[i].id);
-              const result= await getOptionSetDetails(updateArray[i].id);
-              console.log("Result: ", result);
-                let optionSetDetailInfo = result.data;
-                
+              const result= await getOptionDetails(updateArray[i].id);
+                let optionDetailInfo = result.data;
                 // Array for datastore update
                 updateOptionsPayload.push({
-                  "id": optionSetDetailInfo.id,
-                  "name": optionSetDetailInfo.name,
-                  "options": {
-                    "id": updateArray[i].id,
-                    "name": updateArray[i].name,
-                    "code": updateArray[i].code,
-                    "mapCode": updateArray[i].value,
-                  }
-                  
+                  "optionSetId": optionDetailInfo.optionSet.id,
+                  "optionSetName": optionDetailInfo.optionSet.name,
+                  "id": optionDetailInfo.id,
+                  "name": optionDetailInfo.name,
+                  "code": optionDetailInfo.code,
+                  "mapCode": updateArray[i].value,
                 });   
-                console.log("updateOptionsPayload: ", updateOptionsPayload);             
             }    
-          } ) (optionObj[j], {}, j);
+          } ) (elementObj[j], {}, j);
         } 
         
       } ) ( updateArray[i], {}, i );
@@ -164,7 +166,7 @@ class OptionsTable extends React.Component {
       await createDateStoreNameSpace('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(this.state.orgUnitId)).then(info=>{
           console.log("Info: ", info.data);
       });
-      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": [], "attributes": [],"options":updateOptionsPayload }) )
+      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": [], "attributes": [], "options": updateOptionsPayload }) )
       .then((response) => {
         if(response.data.httpStatus === "OK" ){
           this.setState({
@@ -183,7 +185,7 @@ class OptionsTable extends React.Component {
       });
 
     } else {
-      dataStoreNameSpace.elements = updateOptionsPayload;
+      dataStoreNameSpace.options = updateOptionsPayload; // Update existing options
       let finalPayload = dataStoreNameSpace;
       await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(finalPayload) )
       .then((response) => {
@@ -206,30 +208,32 @@ class OptionsTable extends React.Component {
    
   }
   renderOptionSets() {
-    const classes = this.props;
-    let {optionSets, dataStoreNamespace, mergedArrayData} = this.state;
-    //console.log("mergedArrayData: ", mergedArrayData);
-    let content = optionSets.map(datum => {
-      //console.log(datum.options);
-      return datum.options.map(result=>{
+
+    const classes         = this.props;
+    let {mergedArrayData} = this.state;
+
+    let content = mergedArrayData.map(datum => {
         return (
-          <TableRow key={result.id}>
+          <TableRow key={datum.id}>
             <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
-              {datum.name}
+              {datum.optionSetName}
             </TableCell> 
             <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
-              {result.name}
+              {datum.name}
             </TableCell>
             <TableCell component="th" scope="row" style={styleProps.styles.tableHeader}>
-              {result.code}
+              {datum.code}
             </TableCell>
             <TableCell style={styleProps.styles.tableHeader}>
-              <input type="text" id={datum.id}
-              onChange={this.handleInputChange} style={styleProps.styles.inputText}/>
+              <input 
+              type="text" 
+              id={datum.id}
+              value={ datum.mapCode || ''}
+              onChange={this.handleInputChange} 
+              style={styleProps.styles.inputText}/>
             </TableCell> 
           </TableRow>
         )
-      })  
     });
     let spinner;
     if(this.state.loading){

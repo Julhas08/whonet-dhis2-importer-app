@@ -67,10 +67,10 @@ class Attributes extends React.Component {
     let mergedArray;
     if (typeof this.state.dataStoreNamespace !== 'undefined') {
       mergedArray = mergeById(this.state.attributes, this.state.dataStoreNamespace);
-    }
+      this.setState({mergedArrayData: mergedArray});
+    } 
     
     
-    this.setState({mergedArrayData: mergedArray});
 
   }
   /**
@@ -151,7 +151,7 @@ class Attributes extends React.Component {
       await createDateStoreNameSpace('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(this.state.orgUnitId)).then(info=>{
           console.log("Info: ", info.data);
       });
-      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": [],"attributes": updateAttributePayload}) )
+      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": [],"attributes": updateAttributePayload, "options": []}) )
       .then((response) => {
         if(response.data.httpStatus === "OK" ){
           this.setState({
@@ -171,7 +171,7 @@ class Attributes extends React.Component {
 
     } else {
 
-      dataStoreNameSpace.attributes = updateAttributePayload;
+      dataStoreNameSpace.attributes = updateAttributePayload; // update existing attributes
       let finalPayload = dataStoreNameSpace;
       await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(finalPayload) )
       .then((response) => {

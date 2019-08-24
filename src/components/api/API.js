@@ -141,8 +141,8 @@ export const getAttributeDetails = async (attributeId) => {
 * Category Options
 * @retunrs single option detail
 */
-export const getOptionSetDetails = async (optionId) => {
-    return await get('api/optionSets/'+optionId)
+export const getOptionDetails = async (optionId) => {
+    return await get('api/options/'+optionId+'.json?fields=id,code,name,optionSet[id,name]')
     	.then(function (response) {    		
 			return response;
 		})

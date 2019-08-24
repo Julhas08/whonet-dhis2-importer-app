@@ -64,8 +64,10 @@ class DataElementsTable extends React.Component {
         ...jsonPayload2.find((item) => (item.id === itm.dataElement.id) && item),
         ...itm
     }));
-    let mergedArray = mergeById(this.state.dataElements, this.state.dataStoreNamespace);
-    this.setState({mergedArrayData: mergedArray});
+    if (typeof this.state.dataStoreNamespace !== 'undefined') { // If data store elementskey is not empty
+      let mergedArray = mergeById(this.state.dataElements, this.state.dataStoreNamespace);
+      this.setState({mergedArrayData: mergedArray});
+    }
 
   }
   /**
@@ -83,7 +85,6 @@ class DataElementsTable extends React.Component {
     const targetIndex  = mergedArrayData.findIndex(datum => {
       return datum.id === id;
     });
-
     if(targetIndex !== -1){ 
       if(mergedArrayData[targetIndex].sourceCode !== '' || typeof mergedArrayData[targetIndex].sourceCode !== 'undefined' ){
         mergedArrayData[targetIndex].sourceCode = value;
@@ -154,7 +155,7 @@ class DataElementsTable extends React.Component {
       await createDateStoreNameSpace('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(this.state.orgUnitId)).then(info=>{
           console.log("Info: ", info.data);
       });
-      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": updateElementsPayload, "attributes":[] }) )
+      await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify({"elements": updateElementsPayload, "attributes":[], "options": [] }) )
       .then((response) => {
         if(response.data.httpStatus === "OK" ){
           this.setState({
@@ -173,7 +174,7 @@ class DataElementsTable extends React.Component {
       });
 
     } else {
-      dataStoreNameSpace.elements = updateElementsPayload;
+      dataStoreNameSpace.elements = updateElementsPayload; // update existing elements
       let finalPayload = dataStoreNameSpace;
       await metaDataUpdate('api/dataStore/whonet/'+this.state.orgUnitId, JSON.stringify(finalPayload) )
       .then((response) => {
