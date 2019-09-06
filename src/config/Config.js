@@ -1,11 +1,10 @@
-// export const baseUrl = 'http://apps.hispindia.org/amrtest/';
-// export const baseUrl = '../../../';
-export const baseUrl = 'http://localhost:8080/dhis/';
+
+// export const baseUrl = 'http://localhost:8080/dhis/';
+
 export const fetchOptions = {
   headers: { 
     Accept: 'application/json',
-    'Content-Type': 'application/json',
-    Authorization: "Basic " + btoa("julhas:Amr@1234")     
+    'Content-Type': 'application/json',   
   }
 };
 
@@ -13,8 +12,8 @@ export const programId      = "ywNJYaTUVRT";
 export const optionGroupsId = "RdA1TnokkbH";
 export const programStage   = "HrdLXTOGh8A";
 export const trackedEntityInstance = "zYZHWSkfv10";
-export const trackedEntityType     = "tOJvIFXsB5V";
-export const dateColumn  = "DATE_DATA";
+export const trackedEntityType = "tOJvIFXsB5V";
+export const dateColumn        = "DATE_DATA";
 export const patientIdColumn   = "PATIENT_ID";
 export const metaAttributeName = "WHONET code";
 export const metaAttributeUId  = "e5naGkHZ5qv";
