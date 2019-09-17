@@ -10,6 +10,9 @@ package-lock.json
 # production
 /build
 
+# configuration file
+/src/config
+
 # misc
 .DS_Store
 .env.local

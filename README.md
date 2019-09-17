@@ -27,3 +27,7 @@ See the section about [running tests](https://facebook.github.io/create-react-ap
 #Your app is ready to be deployed! <br>
 #Log into your DHIS2 instance and upload the minified zip file
 
+### `Production Server`
+#http://apps.hispindia.org/amrtest
+#https://amrtest.icmr.org.in/amrtest/
+

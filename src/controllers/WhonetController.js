@@ -30,6 +30,9 @@ import {
     getOrgUnitDetail,
     generateAmrId,
     getDataStoreNameSpace,
+    getElementDetails,
+    getOptionDetails,
+    getOptionSetDetails,
 } from '../components/api/API';
 
 styleProps.styles.cardWide = Object.assign({}, styleProps.styles.card, {
@@ -65,6 +68,7 @@ class WHONETFileReader extends React.Component {
             trackedEntityInstance: "",
             dataStoreNamespaceElements: [],
             dataStoreNamespaceAttributes: [],
+            dataStoreNamespaceOptions: [],
         };
         this.uploadCSVFile = this.uploadCSVFile.bind(this);
             
@@ -186,11 +190,13 @@ class WHONETFileReader extends React.Component {
         await getDataStoreNameSpace(orgUnitId).then((response) => {
           this.setState({
             dataStoreNamespaceElements   : response.data.elements,      
-            dataStoreNamespaceAttributes : response.data.attributes      
+            dataStoreNamespaceAttributes : response.data.attributes,      
+            dataStoreNamespaceOptions    : response.data.options      
           }); 
         }).catch(error => this.setState({error: true}));
         const dataStoreNamespaceElements   = this.state.dataStoreNamespaceElements;
         const dataStoreNamespaceAttributes = this.state.dataStoreNamespaceAttributes;
+        const dataStoreNamespaceOptions = this.state.dataStoreNamespaceOptions;
 
         const csvLength = csvData.length
         for(let i=0; i< csvLength-1; i++) {
@@ -203,7 +209,7 @@ class WHONETFileReader extends React.Component {
             for( let j=0; j < len-1; j++  ) {
 
               duplicateStatus = await ( async ([columnName, columnValue], duplicate, index ) => {
-                let elementsFilterResult, attributesFilterResult;
+                let elementsFilterResult, attributesFilterResult, optionsFilterResult;
                 if(config.settingType !== 'multiLab'){
                   
                   elementsFilterResult = this.state.dataElements.filter((element) => {                
@@ -231,6 +237,7 @@ class WHONETFileReader extends React.Component {
                   });
 
                 } else {
+                  // Elements filter from datastore
                   elementsFilterResult = dataStoreNamespaceElements.filter((element) => {
                     return element.sourceCode === columnName;  
                   });
@@ -243,18 +250,56 @@ class WHONETFileReader extends React.Component {
                       elementValue = columnValue.replace(/[=><_]/gi, '');
                     } 
                     elementId = elementsFilterResult[0].id;
-                    eventsPayload[index] = {
-                      "dataElement": elementId, 
-                      "value": elementValue
-                    };   
+
+                    // Options checking for data elements
+                    await getElementDetails(elementId).then((deResponse) => {
+                      
+                      if(typeof deResponse!== 'undefined' && typeof deResponse.data.optionSet !== 'undefined'){
+
+                        let updatedElId = deResponse.data.id;
+                        let optionSetId = deResponse.data.optionSet;
+                      // Get option sets with all options
+                        getOptionSetDetails(optionSetId.id).then((osResponse) => {
+                          if(typeof osResponse!== 'undefined'){
+
+                            let optionsDetail = osResponse.data.options;
+                            for (let i = 0; i < optionsDetail.length; i++) {
+
+                              let optionName = optionsDetail[i].name;
+                      // Options map filter from data store 
+                              optionsFilterResult = this.state.dataStoreNamespaceOptions.filter(function(option) {
+                                return option.mapCode === columnValue;
+                              });
+                              if(optionsFilterResult.length >= 1){
+                        
+                      // Set option value as option name in the data element        
+                                eventsPayload[index] = {
+                                  "dataElement": updatedElId, 
+                                  "value": optionsFilterResult[0].name
+                                };  
+                              }
+                            }
+                          } // end of osResponse
+                        });                                  
+                          
+                      } else { // if this element has no option set
+                          eventsPayload[index] = {
+                            "dataElement": elementId, 
+                            "value": elementValue
+                          };
+                        }  
+                      
+                    }); // end await
+
+                       
                   }
                   if(columnName === config.dateColumn){
                     eventDate = formatDate(columnValue.replace(/[=><_]/gi, ''));
                   } 
-
+                  // Attributes map filter from data store
                   attributesFilterResult = this.state.dataStoreNamespaceAttributes.filter(function(attribute) {
                     return attribute.sourceCode === columnName;
-                  });
+                  });                  
                 }
 
                 

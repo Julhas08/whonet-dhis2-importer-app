@@ -151,6 +151,19 @@ export const getOptionDetails = async (optionId) => {
 		});
 };
 /**
+* Option Set
+* @retunrs single optionSet detail
+*/
+export const getOptionSetDetails = async (optionSetId) => {
+    return await get('api/optionSets/'+optionSetId+'.json?fields=id,code,name,options[id,name,code]')
+      .then(function (response) {       
+      return response;
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+};
+/**
 * Meta attribute-elements-options update
 * updates of attributes values
 */
